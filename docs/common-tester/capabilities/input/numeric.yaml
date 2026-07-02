@@ -1,0 +1,78 @@
+schemaVersion: 1
+kind: input-test-pattern
+patternId: input.numeric
+appliesTo:
+  - input.value.type.numeric
+  - input.numeric.decimalPrecision
+  - input.numeric.range
+  - input.numeric.minValue
+  - input.numeric.maxValue
+requiredCases:
+  typeNumeric:
+    - caseType: integer-success
+      partition: success
+      value: "10"
+      expected:
+        inputValue: retained
+    - caseType: text-fail
+      partition: failure
+      value: abc
+      expected:
+        validation: visible
+  decimalPrecision:
+    - caseType: integer-success
+      partition: success
+      value: "10"
+      expected:
+        inputValue: retained
+    - caseType: decimal-at-max-success
+      partition: success
+      valueFormula: decimal with maxDecimals digits
+      expected:
+        inputValue: retained
+    - caseType: decimal-over-max-fail
+      partition: failure
+      valueFormula: decimal with maxDecimals + 1 digits
+      expected:
+        validation: visible
+    - caseType: non-numeric-fail
+      partition: failure
+      value: abc
+      expected:
+        validation: visible
+  range:
+    - caseType: min-success
+      partition: success
+      valueFormula: minValue
+      expected:
+        inputValue: retained
+    - caseType: max-success
+      partition: success
+      valueFormula: maxValue
+      expected:
+        inputValue: retained
+    - caseType: below-min-fail
+      partition: failure
+      valueFormula: minValue - 1
+      expected:
+        validation: visible
+    - caseType: above-max-fail
+      partition: failure
+      valueFormula: maxValue + 1
+      expected:
+        validation: visible
+  maxOnly:
+    - caseType: at-max-success
+      partition: success
+      valueFormula: maxValue
+      expected:
+        inputValue: retained
+    - caseType: above-max-fail
+      partition: failure
+      valueFormula: maxValue + 1
+      expected:
+        validation: visible
+validatorRules:
+  - Numeric fields must include success and failure cases.
+  - Decimal precision constraints must include over-precision failure.
+  - Numeric range constraints must include lower and upper boundary failures.

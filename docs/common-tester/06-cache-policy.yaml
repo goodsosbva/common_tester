@@ -1,0 +1,14 @@
+schemaVersion: 1
+kind: cache-policy
+
+confluence:
+  compareBy:
+    - pageId
+    - version
+    - bodyHash
+  reuseWhenUnchanged: true
+
+runtime:
+  generatedOutputsStayUnder: docs/common-tester/runtime
+  neverCommitRuntimeByDefault: true
+

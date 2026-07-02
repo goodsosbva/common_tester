@@ -1,0 +1,13 @@
+schemaVersion: 1
+kind: input-assertion-policy
+purpose: Define how failure input tests prove failure.
+failureProofs:
+  - validation-message-visible
+  - value-cleared
+  - value-normalized
+  - value-rejected
+  - submit-blocked
+rules:
+  - A failure case is invalid if it only fills a value and asserts nothing about failure.
+  - A failure case may assert retained value only when it also asserts validation feedback or submit/next blocking.
+  - Renderer output must preserve the same value declared in automation-contract.yaml.

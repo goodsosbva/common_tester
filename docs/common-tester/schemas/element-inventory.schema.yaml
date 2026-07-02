@@ -1,0 +1,66 @@
+schemaVersion: 1
+kind: element-inventory-schema
+
+requiredTopLevel:
+  - schemaVersion
+  - kind
+  - targetId
+  - route
+  - analysis
+  - fields
+
+analysisRequired:
+  - filesInspected
+  - completenessBasis
+
+fieldRequired:
+  - fieldId
+  - scope
+  - control
+  - label
+  - required
+  - codeRefs
+
+scopes:
+  - list
+  - create
+  - edit
+  - detail
+  - modal
+  - drawer
+  - panel
+
+controls:
+  - textbox
+  - textarea
+  - number
+  - combobox
+  - checkbox
+  - radio
+  - date
+  - switch
+  - button
+  - readonly
+  - modal-trigger
+
+optionalFieldKeys:
+  - selectorHints
+  - coverageIntents
+  - applicableIntents
+  - openFlow
+  - blockedReason
+  - notes
+
+rules:
+  - analysis.filesInspected must list the route/component/form/validation files the Agent inspected.
+  - analysis.completenessBasis must explain why the inventory is considered complete for the requested route and capability.
+  - fieldId must be stable and unique in the target.
+  - scope must describe where the field appears.
+  - create/edit/modal fields must be included when the requested flow reaches them.
+  - wizard step fields must be included even when reaching them requires button.click.
+  - unsupported or dependent non-input controls must be listed with blockedReason, not omitted.
+  - textbox, textarea, number, and combobox fields must not use blockedReason to bypass coverage.
+  - input-like fields behind wizard/modal/prerequisite flows require openFlow evidence and executable automation coverage.
+  - fields that cannot be reached statically must be marked with notes and openFlow evidence.
+  - selectorHints are hints only; page-contract.yaml owns final selectors.
+  - codeRefs are required because Agent owns project route/component/field analysis.

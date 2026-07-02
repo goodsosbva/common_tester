@@ -1,0 +1,175 @@
+schemaVersion: 1
+kind: capability-taxonomy
+capability: input
+
+selection:
+  maxCandidates: 80
+  minScore: 35
+  sourceTitleBoost:
+    high:
+      - 텍스트 규칙
+      - 필터
+      - 검색
+      - 유효성
+      - 입력
+      - validation
+    medium:
+      - 테이블 정책
+      - 다국어
+      - alert
+      - confirm
+  sourceTitlePenalty:
+    - 시간표기
+    - 그래프
+    - 브레드크럼
+    - 파일 다운로드
+    - 사용자 정보
+    - 삭제된 정보
+    - 공급자 선택
+
+categories:
+  - id: input.value.allowedCharacters
+    meaning: 어떤 문자를 입력할 수 있는가
+    detect:
+      keywords:
+        - 한글
+        - 알파벳
+        - 숫자
+        - 소수점
+        - 자릿수
+        - 띄어쓰기
+        - 특수문자
+        - 하이픈
+        - 언더바
+    testIntents:
+      - allowed-character-fixtures
+
+  - id: input.value.length
+    meaning: 최소/최대 길이 제약
+    detect:
+      keywords:
+        - 글자 수
+        - 제한
+        - 최대
+        - 최소
+        - 자 이내
+        - 자리까지
+        - 소수점
+    testIntents:
+      - boundary-length
+
+  - id: input.value.required
+    meaning: 필수 입력 여부와 공백 처리
+    detect:
+      keywords:
+        - 필수
+        - required
+        - 반드시
+        - 미입력
+        - 공백
+        - 빈 값
+    testIntents:
+      - required-empty
+      - whitespace-only
+
+  - id: input.interaction.commit
+    meaning: 입력값이 언제 확정되는가
+    detect:
+      keywords:
+        - Enter
+        - 엔터
+        - 검색 버튼
+        - 입력 후
+        - 선택 즉시
+    testIntents:
+      - commit-action
+
+  - id: input.interaction.clear
+    meaning: 입력값 또는 조건이 어떻게 제거되는가
+    detect:
+      keywords:
+        - 제거
+        - 삭제
+        - 초기화
+        - Backspace
+        - clear
+    testIntents:
+      - clear-condition
+
+  - id: input.result.binding
+    meaning: 입력 결과가 어디에 반영되는가
+    detect:
+      keywords:
+        - 태그
+        - 검색 조건
+        - 테이블
+        - 목록
+        - API
+        - validation message
+    testIntents:
+      - result-reflection
+
+  - id: input.feedback.validation
+    meaning: 잘못된 입력에 어떤 피드백을 보여주는가
+    detect:
+      keywords:
+        - 유효성
+        - validation
+        - 오류
+        - 에러
+        - 메시지
+        - 안내 문구
+    testIntents:
+      - validation-message
+
+  - id: input.state.accessibility
+    meaning: visible, enabled, disabled, placeholder, focus 가능 여부
+    detect:
+      keywords:
+        - placeholder
+        - 플레이스홀더
+        - 비활성
+        - disabled
+        - focus
+        - 포커스
+        - 입력창
+        - 검색어
+    testIntents:
+      - visible-enabled
+      - placeholder
+      - focusable
+
+testDataPolicy:
+  meaning: input capability는 성공 입력과 실패 입력을 coverage-matrix에서 먼저 선언한 뒤 automation-contract가 이를 실행해야 한다.
+  successIntents:
+    - allowed-character-fixtures
+    - boundary-length
+    - focusable
+    - commit-action
+    - clear-condition
+    - result-reflection
+  failureIntents:
+    - boundary-length
+    - required-empty
+    - whitespace-only
+    - validation-message
+  defaultSuccessInputs:
+    - inputId: success-basic-korean
+      value: 정상정책명
+      meaning: 한글 기본 허용값
+    - inputId: success-basic-alpha-number
+      value: Policy-001
+      meaning: 영문, 숫자, 하이픈 기본 허용값
+  defaultFailureInputs:
+    - inputId: failure-empty
+      value: ""
+      meaning: 필수값 미입력
+    - inputId: failure-whitespace
+      value: "   "
+      meaning: 공백만 입력
+  rules:
+    - coverage-matrix row가 successIntents에 속하면 inputCases.success를 하나 이상 선언한다.
+    - coverage-matrix row가 failureIntents에 속하면 inputCases.failure를 하나 이상 선언한다.
+    - automation-contract case는 coversInputCases로 matrix row와 inputId를 추적한다.
+    - 성공 입력은 값 유지, 검색 결과 반영, 저장 가능 같은 긍정 결과를 검증한다.
+    - 실패 입력은 validation message, 저장 차단, 값 정규화 같은 부정 결과를 검증한다.

@@ -1,0 +1,83 @@
+schemaVersion: 1
+kind: input-policy-extraction-rules
+purpose: Explain how plain input policy text becomes structured constraints that can expand tests.
+ruleCategories:
+  - id: input.text.length.range
+    meaning: Text input must stay within a minimum and maximum length.
+    textPatterns:
+      - "2~20자"
+      - "최소 2자 최대 20자"
+      - "2자 이상 20자 이하"
+    params:
+      minLength: number
+      maxLength: number
+    requiredPartitions:
+      success:
+        - at-min
+        - inside-range
+        - at-max
+      failure:
+        - below-min
+        - above-max
+        - whitespace-only
+  - id: input.text.length.max
+    meaning: Text input has only a maximum length.
+    textPatterns:
+      - "최대 200자"
+      - "200자 이내"
+      - "200자까지"
+    params:
+      maxLength: number
+    requiredPartitions:
+      success:
+        - at-max
+        - below-max
+      failure:
+        - above-max
+  - id: input.numeric.decimalPrecision
+    meaning: Numeric input allows decimals only up to a fixed precision.
+    textPatterns:
+      - "소수점 둘째 자리까지"
+      - "소수점 2자리까지"
+      - "소수 2자리 이내"
+    params:
+      maxDecimals: number
+    requiredPartitions:
+      success:
+        - integer
+        - decimal-at-max-precision
+      failure:
+        - decimal-over-max-precision
+        - non-numeric
+  - id: input.value.required
+    meaning: Empty or whitespace-only input is invalid.
+    textPatterns:
+      - "필수"
+      - "미입력"
+      - "공백"
+    params:
+      required: boolean
+      trimBeforeValidate: boolean
+    requiredPartitions:
+      success:
+        - valid-non-empty
+      failure:
+        - empty
+        - whitespace-only
+  - id: input.value.allowedCharacters
+    meaning: Only a defined character set may be entered.
+    textPatterns:
+      - "한글, 영문, 숫자 허용"
+      - "하이픈과 언더바 입력 가능"
+    params:
+      allowedCharacters: string[]
+    requiredPartitions:
+      success:
+        - allowed-character-sample
+      failure:
+        - disallowed-character-sample
+agentRules:
+  - Do not treat policy-rules.yaml as final truth. Verify the source normalized markdown first.
+  - Convert every applicable rule into field-constraint-inventory.yaml before writing automation-contract.yaml.
+  - A field with length, required, numeric, or allowed character constraints must have both success and failure cases in test-expansion-plan.yaml.
+  - If the project schema has stricter values than the common policy, keep both sources and use the stricter runtime value for executable cases.

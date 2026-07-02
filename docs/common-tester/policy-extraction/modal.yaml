@@ -1,0 +1,6 @@
+schemaVersion: 1
+kind: modal-policy-extraction-rules
+purpose: Reserved category for modal, drawer, dialog, and wizard open/close/apply policies.
+status: scaffold
+agentRules:
+  - Add structured categories here before modal tests are generated.

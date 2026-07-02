@@ -1,0 +1,47 @@
+schemaVersion: 1
+kind: coverage-matrix-schema
+
+requiredTopLevel:
+  - schemaVersion
+  - kind
+  - targetId
+  - route
+  - rows
+
+rowRequired:
+  - rowId
+  - fieldId
+  - targetRef
+  - intent
+  - candidateIds
+  - generate
+
+optionalRowKeys:
+  - reason
+  - blockedReason
+  - priority
+  - scope
+  - inputCases
+
+inputCasesShape:
+  success:
+    required:
+      - inputId
+      - value
+      - expected
+  failure:
+    required:
+      - inputId
+      - value
+      - expected
+
+rules:
+  - rowId must be stable and unique.
+  - fieldId must exist in element-inventory.yaml.
+  - targetRef must point to a field in page-contract.yaml.
+  - intent must come from policy-candidates.yaml coverage.requiredIntents.
+  - candidateIds must exist in policy-candidates.yaml candidates.
+  - every generate:true row must be covered by automation-contract.yaml coversMatrixRows.
+  - value-oriented input rows must declare inputCases.success and/or inputCases.failure before tests are generated.
+  - every declared input case must be covered by automation-contract.yaml coversInputCases.
+  - generate:false rows require blockedReason.

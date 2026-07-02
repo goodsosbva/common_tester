@@ -1,0 +1,53 @@
+version: 1
+name: playwright-generation-policy
+
+runtime:
+  configPath: docs/common-tester/runtime/playwright.config.ts
+  baseURL: http://localhost:18000
+  testTimeout: 180000
+  expectTimeout: 10000
+  auth:
+    requiredDefault: true
+    owner: foundation
+    storageStatePath: docs/common-tester/runtime/targets/{targetId}/.auth/storage-state.json
+    reuseStorageState: true
+    resetEnv: COMMON_TESTER_AUTH_RESET
+    credentialEnv:
+      username: E2E_USERNAME
+      password: E2E_PASSWORD
+  outputDir: docs/common-tester/runtime/targets/{targetId}/results/test-results
+  reportDir: docs/common-tester/runtime/targets/{targetId}/results/playwright-report
+  webServer:
+    command: pnpm exec nx serve service-admin-web
+    url: http://localhost:18000
+    reuseExistingServer: true
+    timeout: 180000
+
+execution:
+  command: pnpm exec playwright test docs/common-tester/runtime/targets/{targetId}/generated/{targetId}.spec.ts --config docs/common-tester/runtime/playwright.config.ts --workers=1
+
+rules:
+  - automation-contract must not contain raw selectors
+  - automation-contract must use targetRef from page-contract
+  - renderer must not invent a selector
+  - login must be handled by the foundation runtime before generated test steps
+  - generated automation-contract must not model login fields or login button clicks
+  - authenticated tests must reuse Playwright storageState instead of logging in for every case
+  - generated spec must be verified by playwright test --list before run
+  - result report must include policy trace
+
+supportedActions:
+  - page.goto
+  - input.fill
+  - input.clear
+  - input.press
+  - button.click
+  - control.click
+
+supportedAssertions:
+  - expect.visible
+  - expect.enabled
+  - expect.value
+  - expect.textVisible
+  - expect.textMatches
+  - expect.textHidden

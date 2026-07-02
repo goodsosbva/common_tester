@@ -1,0 +1,17 @@
+schemaVersion: 1
+kind: taxonomy-index
+
+capabilities:
+  input:
+    include:
+      - input.yaml
+
+futureCapabilities:
+  description: input 외 capability가 실제 구현될 때 같은 폴더에 yaml을 추가하고 이 index에 연결한다.
+  examples:
+    - table
+    - selection
+    - modal
+    - form
+    - api
+

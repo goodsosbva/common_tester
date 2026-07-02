@@ -1,0 +1,51 @@
+version: 1
+name: confluence-read-policy
+
+baseUrl: https://okestro.atlassian.net
+
+rootPages:
+  - pageId: "1832059178"
+    label: oc3-common-policy-root
+    recursiveChildren: true
+
+leafRootHandling:
+  expandParentWhenLeaf: true
+  requestedLeafPageId: "3067314210"
+
+auth:
+  emailEnv: CONFLUENCE_EMAIL
+  tokenEnv: CONFLUENCE_API_TOKEN
+
+read:
+  readOnly: true
+  bodyFormat: storage
+  pageSize: 50
+  includeChildren: true
+  includeLabels: true
+  includeVersion: true
+
+matching:
+  targetFields:
+    - route
+    - targetName
+    - routeName
+    - componentName
+    - i18nKey
+    - menuLabel
+  minScore: 0.45
+
+changeDetection:
+  sourceKeys:
+    - pageId
+    - version
+    - title
+    - bodyHash
+    - normalizedHash
+  sourceSetHash: sha256
+
+forbidden:
+  - createPage
+  - updatePage
+  - deletePage
+  - addComment
+  - attachFile

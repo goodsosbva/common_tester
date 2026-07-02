@@ -1,0 +1,28 @@
+schemaVersion: 1
+kind: policy-rules-schema
+requiredTopLevel:
+  - schemaVersion
+  - kind
+  - ruleCount
+  - rules
+ruleRequired:
+  - ruleId
+  - capability
+  - category
+  - params
+  - sourceRef
+  - evidenceText
+supportedCapability:
+  - input
+inputCategories:
+  - input.text.length.range
+  - input.text.length.min
+  - input.text.length.max
+  - input.numeric.decimalPrecision
+  - input.value.required
+  - input.value.type.numeric
+  - input.value.allowedCharacters
+rules:
+  - policy-rules.yaml is generated from Confluence plain text and must be verified by Agent before use.
+  - params must hold extracted numeric/string facts such as minLength, maxLength, maxDecimals, required, and allowedCharacters.
+  - sourceRef must trace the rule back to a policy unit and Confluence page.

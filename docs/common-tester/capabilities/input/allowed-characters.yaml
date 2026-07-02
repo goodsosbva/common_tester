@@ -1,0 +1,43 @@
+schemaVersion: 1
+kind: input-test-pattern
+patternId: input.value.allowedCharacters
+appliesTo:
+  - input.value.allowedCharacters
+  - input.character.alphabetOnly
+requiredCases:
+  alphabetOnly:
+    - caseType: alphabet-success
+      partition: success
+      value: abc
+      expected:
+        inputValue: retained
+    - caseType: korean-fail
+      partition: failure
+      value: 한글
+      expected:
+        validation: visible
+    - caseType: number-fail
+      partition: failure
+      value: "123"
+      expected:
+        validation: visible
+    - caseType: special-character-fail
+      partition: failure
+      value: abc!
+      expected:
+        validation: visible
+  allowedCharacterSet:
+    - caseType: allowed-{group}-success
+      partition: success
+      valueFormula: one valid value for each allowed character group such as korean, alphabet, number, hyphen, underscore, space
+      expected:
+        inputValue: retained
+    - caseType: disallowed-sample-fail
+      partition: failure
+      valueFormula: character outside allowedCharacters
+      expected:
+        validation: visible
+validatorRules:
+  - Alphabet-only fields must include alphabet success, korean failure, number failure, and special-character failure.
+  - Generic allowed character constraints must include one success case per allowed character group and one disallowed failure case.
+  - If allowedCharacters includes korean, alphabet, number, hyphen, and underscore, expected caseTypes are allowed-korean-success, allowed-alphabet-success, allowed-number-success, allowed-hyphen-success, allowed-underscore-success, and disallowed-sample-fail.

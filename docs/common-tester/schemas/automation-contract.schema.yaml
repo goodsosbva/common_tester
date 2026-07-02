@@ -1,0 +1,64 @@
+schemaVersion: 1
+kind: automation-contract-schema
+requiredTopLevel:
+  - schemaVersion
+  - kind
+  - targetId
+  - pageRef
+  - cases
+caseRequired:
+  - id
+  - capability
+  - title
+  - generate
+  - coversMatrixRows
+  - coversIntents
+  - steps
+  - assertions
+  - sourceRefs
+optionalCaseKeys:
+  - coversInputCases
+  - coversExpansionCases
+supportedCapabilities:
+  - input
+supportedActions:
+  - page.goto
+  - input.fill
+  - input.clear
+  - input.press
+  - button.click
+  - control.click
+  - dropdown.selectFirst
+supportedAssertions:
+  - expect.value
+  - expect.visible
+  - expect.enabled
+  - expect.textVisible
+  - expect.textHidden
+valueSources:
+  - literal
+  - fixture
+  - generated
+  - env
+targetRefPrefix:
+  - elements.fields.
+  - elements.buttons.
+  - elements.tables.
+rules:
+  - automation steps must not contain raw selectors
+  - automation steps must use targetRef except page.goto
+  - authentication/login steps are not part of automation-contract; foundation Playwright runtime owns login and storageState reuse
+  - expect.textVisible and expect.textHidden must use text and must not need targetRef
+  - every generated case must include at least one assertion
+  - every case must include sourceRefs
+  - every generated case must include coversIntents
+  - every generated case should include coversMatrixRows unless it is a route-level case
+  - every generated case for input value behavior should include coversInputCases
+  - every generated case created from test-expansion-plan.yaml must include coversExpansionCases
+  - every coverage-matrix.yaml generate:true row must be covered by at least one generated case coversMatrixRows
+  - every coverage-matrix.yaml inputCases item must be covered by at least one generated case coversInputCases
+  - generated cases must cover policy-candidates.yaml coverage.requiredIntents
+  - generated case count must be at least policy-candidates.yaml coverage.minGeneratedCaseCount
+  - expect.value assertions must use value. Do not use expected for expect.value.
+  - every generated case covering a test-expansion-plan input case must fill the same value declared by that expansion case
+  - failure input cases must include observable failure proof such as expect.textVisible, value rejection/normalization, or submit/next blocking

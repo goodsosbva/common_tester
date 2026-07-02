@@ -1,0 +1,29 @@
+schemaVersion: 1
+kind: input-capability-pattern-index
+purpose: Define mandatory input test patterns so Agent cannot stop at a few example tests.
+principle:
+  - Confluence and project schema describe constraints.
+  - This catalog describes the mandatory success/failure/boundary tests for each constraint type.
+  - Agent maps each field constraint to one pattern id and expands every required case.
+  - JS runner validates the expansion and rendered spec against this catalog.
+patterns:
+  input.value.required: docs/common-tester/capabilities/input/required.yaml
+  input.text.length.range: docs/common-tester/capabilities/input/length.yaml
+  input.text.length.min: docs/common-tester/capabilities/input/length.yaml
+  input.text.length.max: docs/common-tester/capabilities/input/length.yaml
+  input.value.allowedCharacters: docs/common-tester/capabilities/input/allowed-characters.yaml
+  input.character.alphabetOnly: docs/common-tester/capabilities/input/allowed-characters.yaml
+  input.value.type.numeric: docs/common-tester/capabilities/input/numeric.yaml
+  input.numeric.decimalPrecision: docs/common-tester/capabilities/input/numeric.yaml
+  input.numeric.range: docs/common-tester/capabilities/input/numeric.yaml
+  input.numeric.minValue: docs/common-tester/capabilities/input/numeric.yaml
+  input.numeric.maxValue: docs/common-tester/capabilities/input/numeric.yaml
+agentOutput:
+  fieldConstraintInventory: agent-response/field-constraint-inventory.yaml
+  testExpansionPlan: agent-response/test-expansion-plan.yaml
+  automationContract: agent-response/automation-contract.yaml
+rules:
+  - Every applicable input constraint must produce all requiredCases for its pattern.
+  - Success cases must prove accepted input.
+  - Failure cases must prove validation feedback, input rejection, normalization, or submit/next blocking.
+  - Partial/sample input coverage is invalid.

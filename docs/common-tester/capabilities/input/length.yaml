@@ -1,0 +1,69 @@
+schemaVersion: 1
+kind: input-test-pattern
+patternId: input.text.length
+appliesTo:
+  - input.text.length.range
+  - input.text.length.min
+  - input.text.length.max
+requiredCases:
+  range:
+    - caseType: below-min
+      partition: failure
+      valueFormula: minLength - 1
+      expected:
+        validation: visible
+    - caseType: at-min
+      partition: success
+      valueFormula: minLength
+      expected:
+        inputValue: retained
+    - caseType: inside-range
+      partition: success
+      valueFormula: between minLength and maxLength
+      expected:
+        inputValue: retained
+    - caseType: at-max
+      partition: success
+      valueFormula: maxLength
+      expected:
+        inputValue: retained
+    - caseType: above-max
+      partition: failure
+      valueFormula: maxLength + 1
+      expected:
+        validation: visible
+  minOnly:
+    - caseType: below-min
+      partition: failure
+      valueFormula: minLength - 1
+      expected:
+        validation: visible
+    - caseType: at-min
+      partition: success
+      valueFormula: minLength
+      expected:
+        inputValue: retained
+    - caseType: above-min
+      partition: success
+      valueFormula: minLength + 1
+      expected:
+        inputValue: retained
+  maxOnly:
+    - caseType: below-max
+      partition: success
+      valueFormula: maxLength - 1
+      expected:
+        inputValue: retained
+    - caseType: at-max
+      partition: success
+      valueFormula: maxLength
+      expected:
+        inputValue: retained
+    - caseType: above-max
+      partition: failure
+      valueFormula: maxLength + 1
+      expected:
+        validation: visible
+validatorRules:
+  - A range constraint is invalid unless below-min, at-min, inside-range, at-max, and above-max appear in test-expansion-plan.yaml.
+  - Failure cases must not rely only on fill; they require validation feedback, input rejection, normalization, or submit/next blocking evidence.

@@ -1,0 +1,24 @@
+schemaVersion: 1
+kind: input-test-pattern
+patternId: input.value.required
+appliesTo:
+  - input.value.required
+requiredCases:
+  - caseType: empty
+    partition: failure
+    value: ""
+    expected:
+      validation: visible
+  - caseType: whitespace-only
+    partition: failure
+    value: "   "
+    expected:
+      validation: visible
+  - caseType: valid-non-empty
+    partition: success
+    valueFormula: valid field value
+    expected:
+      inputValue: retained
+validatorRules:
+  - Required fields must test empty, whitespace-only, and valid-non-empty.
+  - Empty and whitespace-only failures require explicit failure proof.
