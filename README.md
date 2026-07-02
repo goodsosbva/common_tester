@@ -2,6 +2,8 @@
 
 Common Tester 실행기와 테스트 정책/계약 문서 모음입니다.
 
+도구의 목적과 전체 흐름은 [docs/common-tester/README.md](docs/common-tester/README.md)를 참고하세요.
+
 ## Local Markdown 실행
 
 ```bash
