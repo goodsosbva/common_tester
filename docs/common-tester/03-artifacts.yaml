@@ -1,0 +1,57 @@
+version: 1
+name: artifact-contract
+
+workDir: docs/common-tester/runtime
+lockFile: docs/common-tester/runtime/lock.json
+targetDir: docs/common-tester/runtime/targets/{targetId}
+
+artifacts:
+  target: target.json
+  sourceIndex: source-index.json
+  projectModel: project-model.json
+  reuseDecision: reuse-decision.json
+  requirements: requirements.md
+  projectEvidence: project-evidence.md
+  elementInventory: element-inventory.yaml
+  coverageMatrix: coverage-matrix.yaml
+  contractGaps: contract-gaps.md
+  testCaseSpec: test-case-spec.md
+  agentRequestMarkdown: agent-request.md
+  agentRequestJson: agent-request.json
+  agentOutputContract: agent-output-contract.yaml
+  policyCandidates: policy-candidates.yaml
+  policyRules: policy-rules.yaml
+  agentResponseDir: agent-response
+  commonPolicyMarkdown: common-policy.md
+  pageRequirementsMarkdown: page-requirements.md
+  inputFieldsMarkdown: input-fields.md
+  acceptanceCriteriaMarkdown: acceptance-criteria.md
+  coverageLedgerMarkdown: coverage-ledger.md
+  fieldConstraintInventory: field-constraint-inventory.yaml
+  testExpansionPlan: test-expansion-plan.yaml
+  commonPolicyYaml: common-policy.yaml
+  pageContract: page-contract.yaml
+  mcpObservation: mcp-observation.yaml
+  automationContract: automation-contract.yaml
+  runPlan: run-plan.json
+  listedTests: listed-tests.json
+  generatedSpecDir: generated
+  generatedSpecFile: generated/{targetId}.spec.ts
+  resultsDir: results
+  resultMarkdown: results/result.md
+  resultJson: results/result.json
+
+cache:
+  confluenceDir: docs/common-tester/runtime/cache/confluence
+  treeIndex: docs/common-tester/runtime/cache/confluence/tree-index.json
+  sectionIndex: docs/common-tester/runtime/cache/confluence/section-index.json
+  policyUnits: docs/common-tester/runtime/cache/confluence/policy-units.yaml
+  policyCategories: docs/common-tester/runtime/cache/confluence/policy-categories.yaml
+  policyRules: docs/common-tester/runtime/cache/confluence/policy-rules.yaml
+  rawBodyDir: docs/common-tester/runtime/cache/confluence/raw
+  normalizedBodyDir: docs/common-tester/runtime/cache/confluence/normalized
+
+pathRules:
+  allTestRelatedOutputsMustStayUnder: docs/common-tester/runtime
+  noSecretsUnderDocs: true
+  allowLocalOnly: true

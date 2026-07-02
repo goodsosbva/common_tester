@@ -1,0 +1,30 @@
+schemaVersion: 1
+kind: field-constraint-inventory-schema
+requiredTopLevel:
+  - schemaVersion
+  - kind
+  - targetId
+  - route
+  - fields
+fieldRequired:
+  - fieldId
+  - targetRef
+  - control
+  - label
+  - constraints
+constraintRequired:
+  - constraintId
+  - type
+  - params
+  - sourceRefs
+sourceKinds:
+  - policy-rule
+  - project-schema
+  - project-code
+  - page-contract
+rules:
+  - Every input-like element from element-inventory.yaml must appear here.
+  - Constraints from Confluence must cite policy-rules.yaml ruleId.
+  - Constraints from project validation code must cite project files through sourceRefs.
+  - A field may combine common policy constraints and stricter project schema constraints.
+  - Automation generation should be based on these constraints, not on raw policy text alone.

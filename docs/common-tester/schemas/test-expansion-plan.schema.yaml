@@ -1,0 +1,34 @@
+schemaVersion: 1
+kind: test-expansion-plan-schema
+requiredTopLevel:
+  - schemaVersion
+  - kind
+  - targetId
+  - route
+  - expectedExecutableCaseCountMin
+  - cases
+caseRequired:
+  - caseId
+  - fieldId
+  - constraintId
+  - caseType
+  - partition
+  - value
+  - generate
+  - expected
+partitionKinds:
+  - success
+  - failure
+  - boundary
+rules:
+  - Every executable case must map to a field-constraint-inventory fieldId and constraintId.
+  - caseType must equal one requiredCases id from docs/common-tester/capabilities/input/*.yaml for the mapped constraint.
+  - value must be the concrete literal or value source that the renderer should use for this case.
+  - Every applicable constraint must produce success and failure partitions unless the Agent records a concrete blocked reason.
+  - length.range must include below-min, at-min, inside-range, at-max, and above-max.
+  - required must include empty, whitespace-only, and valid-non-empty.
+  - decimalPrecision must include integer-success, decimal-at-max-success, decimal-over-max-fail, and non-numeric-fail.
+  - alphabet-only character rules must include alphabet-success, korean-fail, number-fail, and special-character-fail.
+  - Failure cases must include proof of rejection, validation feedback, or submit/next blocking.
+  - expectedExecutableCaseCountMin is the floor that automation-contract.yaml must meet.
+  - automation-contract.yaml cases must cite expansion cases through coversExpansionCases.

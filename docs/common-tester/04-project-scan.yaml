@@ -1,0 +1,68 @@
+version: 1
+name: project-scan-policy
+
+role:
+  status: advisory
+  owner: Agent
+  runnerPurpose: optional workspace hint only
+  defaultFlow: not invoked by prepare-agent
+  rule: JS runner must not treat project scan output as the final route/component/field/control decision.
+  agentRule: Agent must inspect project code directly before writing element-inventory, page-contract, coverage-matrix, and automation-contract.
+
+workspace:
+  packageManager: pnpm
+  monorepo: nx
+
+scan:
+  include:
+    - package.json
+    - pnpm-workspace.yaml
+    - nx.json
+    - apps/**/project.json
+    - packages/**/project.json
+    - apps/**/src/**/*.{ts,tsx,vue,js,jsx}
+    - packages/**/src/**/*.{ts,tsx,vue,js,jsx}
+    - libs/**/src/**/*.{ts,tsx,vue,js,jsx,json}
+  exclude:
+    - node_modules/**
+    - dist/**
+    - build/**
+    - coverage/**
+    - docs/**
+    - "**/e2e/**"
+    - "**/*.spec.*"
+    - "**/*.test.*"
+
+detect:
+  workspaceProjects: true
+  hostApp: true
+  routeTree: true
+  vueRouter: true
+  lazyPageComponents: true
+  i18nKeys: true
+  apiClients: true
+  tableModels: true
+  formModels: true
+
+routeComposer:
+  enabled: true
+  routeArrayExports:
+    - "**/src/pages/index.ts"
+    - "**/src/pages/**/index.ts"
+  hostRouteFiles:
+    - "apps/**/src/pages/index.ts"
+  importAliasMustResolve: true
+  joinParentChildPaths: true
+  detectDynamicRoutes: true
+
+currentProjectHints:
+  defaultHostApp: service-admin-web
+  defaultServeCommand: pnpm exec nx serve service-admin-web
+  defaultBaseURL: http://localhost:18000
+  platformEnvName: VITE_ENABLE_PLATFORM_LIST
+  requiredPlatformForMonitoring: MONITORING
+
+evidence:
+  writeSourceFilePaths: true
+  writeLineHints: true
+  writeUnresolvedCandidates: true

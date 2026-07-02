@@ -1,0 +1,17 @@
+schemaVersion: 1
+kind: common-policy-schema
+
+requiredTopLevel:
+  - schemaVersion
+  - kind
+  - targetId
+  - capability
+  - rules
+
+ruleRequired:
+  - id
+  - sourceUnit
+  - categories
+  - obligations
+  - reason
+

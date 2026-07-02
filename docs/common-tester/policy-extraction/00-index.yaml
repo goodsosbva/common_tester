@@ -1,0 +1,17 @@
+schemaVersion: 1
+kind: policy-extraction-index
+purpose: Convert plain Confluence common policy text into structured rule candidates before Agent designs page-specific tests.
+principle:
+  - JS runner extracts repeatable rule-shaped facts from raw policy text.
+  - Agent verifies extracted rules against Confluence normalized markdown.
+  - Agent maps verified rules to actual project fields and expands tests.
+files:
+  input: docs/common-tester/policy-extraction/input.yaml
+  table: docs/common-tester/policy-extraction/table.yaml
+  selection: docs/common-tester/policy-extraction/selection.yaml
+  modal: docs/common-tester/policy-extraction/modal.yaml
+  api: docs/common-tester/policy-extraction/api.yaml
+outputs:
+  policyRules: docs/common-tester/runtime/cache/confluence/policy-rules.yaml
+  fieldConstraintInventory: docs/common-tester/runtime/targets/{targetId}/agent-response/field-constraint-inventory.yaml
+  testExpansionPlan: docs/common-tester/runtime/targets/{targetId}/agent-response/test-expansion-plan.yaml

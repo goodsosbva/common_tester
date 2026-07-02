@@ -1,0 +1,59 @@
+version: 2
+name: common-tester-flow
+mode: local-agent-bridge
+
+runner:
+  root: docs/tools/common-tester
+  entry: docs/tools/common-tester/runner.ts
+  registry: docs/tools/common-tester/registry.ts
+  context: docs/tools/common-tester/context.ts
+  operatorsDir: docs/tools/common-tester/operators
+
+actions:
+  prepare-agent:
+    description: Collect reference policy from Confluence or local markdown, classify it by capability, and stop after writing an agent request. Agent owns project route/component/field analysis.
+    steps:
+      - load_foundation
+      - resolve_target
+      - sync_confluence_tree
+      - normalize_confluence
+      - build_policy_units
+      - classify_policy_units
+      - extract_policy_rules
+      - build_policy_candidates
+      - build_agent_request
+
+  continue:
+    description: Read agent-response, validate contracts, render Playwright, list tests, run tests, and report.
+    steps:
+      - load_foundation
+      - resolve_target
+      - read_agent_response
+      - validate_contract
+      - build_run_plan
+      - generate_spec
+      - audit_generated_spec
+      - list_spec
+      - verify_runtime
+      - run_spec
+      - write_report
+
+  summary:
+    description: Print target output paths and latest result without requiring the user to set shell variables.
+    steps:
+      - load_foundation
+      - resolve_target
+      - print_summary
+
+  create:
+    description: Alias for prepare-agent. The flow intentionally stops for agent analysis.
+    steps:
+      - load_foundation
+      - resolve_target
+      - sync_confluence_tree
+      - normalize_confluence
+      - build_policy_units
+      - classify_policy_units
+      - extract_policy_rules
+      - build_policy_candidates
+      - build_agent_request

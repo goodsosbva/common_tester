@@ -1,0 +1,54 @@
+schemaVersion: 1
+kind: policy-candidates-schema
+
+requiredTopLevel:
+  - schemaVersion
+  - kind
+  - generatedAt
+  - target
+  - sources
+  - selection
+  - generationRules
+  - scannedCandidateCount
+  - candidateCount
+  - coverage
+  - candidates
+
+targetRequired:
+  - targetId
+  - route
+  - capability
+
+candidateRequired:
+  - candidateId
+  - capability
+  - sourceRef
+  - policyUnitId
+  - heading
+  - categoryIds
+  - matchedKeywords
+  - suggestedTestIntents
+  - relevance
+  - policyText
+
+coverageRequired:
+  - minGeneratedCaseCount
+  - selectionBasis
+  - requiredIntents
+  - rules
+
+requiredIntentRequired:
+  - intent
+  - candidateIds
+  - categoryIds
+  - reason
+
+sourceRefRequired:
+  - pageId
+  - titlePath
+
+rules:
+  - candidates are Confluence policy evidence, not generated tests.
+  - coverage.requiredIntents is the distinct suggestedTestIntents set from selected candidates.
+  - generated test breadth must be expanded through element-inventory.yaml and coverage-matrix.yaml.
+  - every generated case coversIntents value must be backed by a cited candidateId whose suggestedTestIntents includes that intent.

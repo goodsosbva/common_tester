@@ -1,0 +1,58 @@
+schemaVersion: 1
+kind: page-contract-schema
+requiredTopLevel:
+  - schemaVersion
+  - kind
+  - targetId
+  - route
+  - elements
+elementGroups:
+  fields:
+    required:
+      - control
+      - label
+      - selectors
+      - sourceRefs
+    optional:
+      - coverageIntents
+      - applicableIntents
+      - scope
+      - codeRefs
+    allowedControls:
+      - textbox
+      - textarea
+      - combobox
+      - checkbox
+      - radio
+      - date
+      - number
+  buttons:
+    required:
+      - label
+      - selectors
+      - sourceRefs
+  tables:
+    required:
+      - label
+      - selectors
+      - sourceRefs
+selectorStrategies:
+  role:
+    required:
+      - role
+  label:
+    required:
+      - text
+  placeholder:
+    required:
+      - value
+  testId:
+    required:
+      - value
+  text:
+    required:
+      - text
+sourceRefs:
+  required:
+    - pageId
+    - titlePath

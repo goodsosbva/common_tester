@@ -1,0 +1,31 @@
+{
+  "rootPageId": "2926936245",
+  "pages": [
+    {
+      "id": "2926936245",
+      "title": "00. Common Test Policy",
+      "parentId": null,
+      "version": {
+        "number": 1
+      },
+      "body": {
+        "storage": {
+          "value": "<h1>00. Common Test Policy</h1><h2>Input Rule</h2><p>Input tests must fill a visible field and verify that the value is retained.</p><p>텍스트 입력은 2~20자 범위를 기본으로 검증한다.</p><p>필수 입력은 미입력과 공백만 입력을 실패로 확인한다.</p><p>숫자 입력은 소수점 둘째 자리까지 허용한다.</p><p>이름 입력은 한글, 영문, 숫자, 하이픈, 언더바를 허용한다.</p><table><tr><th>Rule</th><th>Required</th></tr><tr><td>sourceRefs</td><td>Y</td></tr><tr><td>assertion</td><td>Y</td></tr></table>"
+        }
+      }
+    },
+    {
+      "id": "3000000001",
+      "title": "Alarm Policy List",
+      "parentId": "2926936245",
+      "version": {
+        "number": 3
+      },
+      "body": {
+        "storage": {
+          "value": "<h1>Alarm Policy List</h1><h2>Search Area</h2><table><tr><th>Field</th><th>Control</th><th>Required</th><th>Label</th><th>Placeholder</th></tr><tr><td>searchKeyword</td><td>textbox</td><td>N</td><td>검색어</td><td>항목 이름 또는 값을 입력해 주세요.</td></tr></table><h2>Acceptance Criteria</h2><ul><li>The alarm policy list route loads.</li><li>The search keyword field accepts text.</li><li>The entered value remains in the field.</li></ul>"
+        }
+      }
+    }
+  ]
+}
