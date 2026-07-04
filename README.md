@@ -4,9 +4,10 @@ Common Tester 실행기와 테스트 정책/계약 문서 모음입니다.
 
 도구의 목적과 전체 흐름은 [docs/common-tester/README.md](docs/common-tester/README.md)를 참고하세요.
 
-## Local Markdown 실행
+## 실행 방법
 
 ```bash
+# route 뒤에 path 입력, --capability 중점으로 테스트 하는 부분 입력, 테스트 생성 시, 참고할 규칙을  --reference-md 뒤에 md 형시으로 작성
 node docs/tools/common-tester/runner.js create --route "/orders" --capability input --reference-md docs/reference/order-form.md
 ```
 
