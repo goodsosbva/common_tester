@@ -44,13 +44,13 @@
 - 모의 모델이 반환한 계획을 저장한 뒤 Python Playwright로 실행해 정상 화면 2건이 통과했다.
 - 존재하지 않는 정책 근거를 참조한 계획은 422로 거부됐다.
 - `search_policy`에 허용 범위를 넘는 인자를 보낸 경우 생성은 실패하고 기록이 남았다. 실행 상태는 다시 `created`가 됐다.
-- **실제 OpenAI API 응답은 아직 검증하지 않았다.** 로컬에 유효한 `OPENAI_API_KEY`를 설정한 후 [실제 호출 검사](../../scripts/check-stage4-live.ps1)로 확인한다.
+- 2026-10-26 로컬 `.env`의 `OPENAI_API_KEY`를 로드해 실제 OpenAI 호출을 시도했다. 제공된 키가 인증 단계에서 `AuthenticationError`로 거부되어 도구 호출이나 모델 계획은 생성되지 않았다. 유효한 키로 다시 확인해야 한다.
 
 ## 실행 방법과 남은 범위
 
 - 기본 모델은 `gpt-5.4-mini`이고 `OPENAI_MODEL`로 변경할 수 있다. API 키는 `OPENAI_API_KEY` 환경 변수에서만 읽는다.
 - 키 없이도 `python api/check_stage4.py`로 모의 모델 통합 검사를 반복할 수 있다. 이때 전용 DB와 API가 실행 중이어야 한다.
-- 실제 호출 확인 시 API를 시작한 PowerShell 창에서 키를 가려 입력하고, 다른 창에서 `scripts/check-stage4-live.ps1`을 실행한다. 키 값은 저장소와 문서에 넣지 않는다.
+- 실제 호출 확인 시 저장소 루트의 `.env`에 `OPENAI_API_KEY`를 설정하고 `scripts/start-api.ps1`로 API를 재시작한다. 다른 창에서 `scripts/check-stage4-live.ps1`을 실행한다. 키 값은 저장소와 문서에 넣지 않는다.
 - 자동 보정, 확인 대기, 중단 후 재개는 5단계 LangGraph에서 다룬다. 모델이 만든 계획의 기대값이 정책 원문에서 논리적으로 도출되는지는 아직 완전히 검증하지 않는다.
 
 도구 호출과 `call_id` 연결은 [OpenAI Docs의 function calling 안내](https://developers.openai.com/api/docs/guides/function-calling), Pydantic 구조화 출력은 [OpenAI Docs의 structured outputs 안내](https://developers.openai.com/api/docs/guides/structured-outputs)에 따른다.
