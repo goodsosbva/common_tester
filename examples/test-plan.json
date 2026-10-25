@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "project_id": "demo-orders",
+  "route": "/orders/new",
+  "policy_version": "v1",
+  "fields": [
+    {
+      "id": "order_name",
+      "label": "주문명",
+      "locator": { "kind": "label", "value": "주문명" }
+    }
+  ],
+  "cases": [
+    {
+      "id": "order-name-input",
+      "title": "주문명을 입력하면 값이 유지된다",
+      "steps": [
+        { "action": "fill", "field_id": "order_name", "value": "정상 주문" }
+      ],
+      "assertions": [
+        { "action": "value", "field_id": "order_name", "expected": "정상 주문" }
+      ],
+      "evidence": [
+        { "kind": "policy", "source_id": "policy:demo-orders:order-name:v1:0", "version": "v1" }
+      ]
+    }
+  ]
+}

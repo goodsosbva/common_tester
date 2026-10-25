@@ -1,0 +1,7 @@
+{
+  "project_id": "demo-orders",
+  "document_id": "order-quantity",
+  "version": "v1",
+  "title": "주문 수량 정책",
+  "body": "주문 수량은 1부터 99까지의 정수만 허용합니다. 0, 음수, 소수는 저장할 수 없습니다.\n\n재고 수량을 초과하면 주문을 저장하지 않고 재고 부족 메시지를 표시합니다."
+}

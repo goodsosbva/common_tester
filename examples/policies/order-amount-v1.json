@@ -1,0 +1,7 @@
+{
+  "project_id": "demo-orders",
+  "document_id": "order-amount",
+  "version": "v1",
+  "title": "주문 금액 정책",
+  "body": "요청 금액은 0원 이상이어야 합니다. 음수 금액은 저장할 수 없습니다. 원화 금액은 소수점 없이 정수로 입력합니다."
+}
