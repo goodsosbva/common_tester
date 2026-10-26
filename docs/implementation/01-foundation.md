@@ -1,94 +1,52 @@
-# Common Tester 구현 기록: 1단계 기반 구축
+# 1단계: 테스트 실행의 기본 구조
 
-## 이번 단계의 목표
+## 한 문장으로 설명
 
-- 테스트 대상을 등록하고 실행 단위를 만들 수 있게 한다.
-- 이후 생성기와 실행기가 공유할 실행계획 형식을 먼저 고정한다.
-- 화면, API, PostgreSQL까지 실제 데이터가 오가는 최소 경로를 완성한다.
+테스트 한 번을 `run`으로 저장하고, 생성기와 브라우저 실행기가 함께 사용할 `TestPlan` 형식을 정한 뒤, React 화면에서 FastAPI를 거쳐 PostgreSQL까지 저장과 조회가 되는 경로를 만들었다.
 
-## 구현한 것
+이 단계에서는 AI가 계획을 만들거나 브라우저를 조작하지 않는다. 2단계에서 실행기를, 3단계 이후에 정책 검색과 모델 생성을 붙일 수 있도록 입력과 저장 형식을 먼저 확정했다.
 
-| 영역 | 기술 | 구현 내용 |
+## 왜 이 구조로 만들었나
+
+- **실행 단위가 필요했다.** 같은 화면을 여러 번 테스트해도 요청과 결과를 구분할 수 있도록 실행마다 UUID를 발급한다.
+- **생성기와 실행기의 약속이 필요했다.** 생성기가 자유 형식의 문장을 반환하면 실행기가 해석하기 어렵다. 그래서 화면 요소, 조작 순서, 기대 결과를 `TestPlan`이라는 구조화된 데이터로 정의했다.
+- **저장과 검증의 역할을 나눴다.** `project_id`, `route`, `policy_version`, `status`처럼 목록과 상태 확인에 필요한 값은 `runs` 테이블의 열로 저장한다. 테스트 사례 수에 따라 모양이 달라지는 계획은 JSONB로 저장한다. 저장 전에 Pydantic과 서버 검증을 통과시킨다.
+
+## 실제 요청 한 번이 처리되는 순서
+
+예: `demo-orders` 프로젝트의 `/fixtures/order.html`을 정책 `v1` 기준으로 테스트한다.
+
+1. React가 프로젝트 ID, 화면 경로, 정책 버전을 입력받아 `POST /api/runs`로 보낸다. 화면 코드는 [App.tsx](../../web/src/App.tsx)의 `createRun`에 있다.
+2. FastAPI가 요청을 `RunCreate` 모델로 검사한다. 경로는 `/`로 시작해야 하고 식별자는 빈 문자열일 수 없다. 모델은 [models.py](../../api/app/models.py)에 있다.
+3. `create_run`이 `uuid4()`로 실행 ID를 만들고 PostgreSQL `runs` 테이블에 `project_id`, `route`, `policy_version`을 저장한다. `status`의 기본값은 `created`다. DB가 반환한 행을 API 응답으로 보낸다. 코드는 [main.py](../../api/app/main.py)에 있다.
+4. React가 반환된 실행을 화면에 선택하고 `GET /api/runs`로 목록을 다시 읽는다. 상세 화면을 열면 `GET /api/runs/{id}`로 해당 행을 조회한다.
+5. 계획을 저장할 때는 `PUT /api/runs/{id}/plan`으로 `TestPlan` JSON을 보낸다. FastAPI와 Pydantic이 형식을 검사하고, 서버가 해당 실행을 `SELECT ... FOR UPDATE`로 잠근 뒤 상태와 대상을 확인한다. 통과하면 계획 전체를 JSONB 열에 저장한다.
+
+요약하면 `화면 입력 → HTTP 요청 → Pydantic 검사 → DB 저장 → HTTP 응답 → 화면 갱신`이다.
+
+## TestPlan을 어떻게 설계했나
+
+계획에는 다음 데이터가 들어간다.
+
+| 항목 | 의미 | 예 |
 | --- | --- | --- |
-| 화면 | React, TypeScript, Vite | 프로젝트 ID, 화면 경로, 정책 버전을 입력해 실행 생성. 최근 실행 조회와 상세 확인 |
-| API | FastAPI, Pydantic | 실행 생성, 목록, 상세, 실행계획 저장. 요청 형식과 필드 참조 검증 |
-| 저장 | PostgreSQL, psycopg | 실행 메타데이터와 JSONB 실행계획 저장 |
-| 로컬 구동 | PowerShell | 저장소 전용 PostgreSQL을 127.0.0.1:55432에 만들고 API 실행 |
+| 대상 | 어느 프로젝트와 화면, 정책 버전인지 | `demo-orders`, `/fixtures/order.html`, `v1` |
+| `fields` | 조작할 화면 요소와 찾는 방법 | `order_name`을 `label=주문명`으로 찾기 |
+| `steps` | 브라우저가 할 동작 | `order_name`에 `정상 주문` 입력 |
+| `assertions` | 동작 뒤 기대하는 상태 | `order_name`의 값이 `정상 주문`인지 확인 |
+| `evidence` | 해당 사례의 근거 출처 | 정책 문단의 `source_id` |
 
-## 데이터가 흐르는 순서
+예를 들면 `fields`에 `order_name`이라는 요소를 한 번 정의하고, 사례는 그 ID를 참조한다. 브라우저 실행기는 나중에 이 ID로 locator를 찾고 `fill`과 `value` 검증을 수행한다. 전체 예시는 [test-plan.json](../../examples/test-plan.json)에 있다.
 
-1. 화면에서 `project_id`, `route`, `policy_version`을 입력한다.
-2. `POST /api/runs`가 UUID를 발급하고 PostgreSQL `runs` 테이블에 저장한다.
-3. 화면은 `GET /api/runs`로 최근 실행을 가져오고, 선택한 실행은 `GET /api/runs/{id}`로 조회한다.
-4. 실행계획을 `PUT /api/runs/{id}/plan`으로 보내면 Pydantic이 형식을 검사한다. API는 계획의 대상과 실행의 대상이 같은지도 확인한 뒤 JSONB로 저장한다.
+계획 저장 전에 [models.py](../../api/app/models.py)는 필드 ID와 사례 ID의 중복, 존재하지 않는 필드 참조, 동작과 기대값의 누락을 거부한다. `schema_version: 1`을 두어 계획 형식이 바뀔 때 버전을 구별할 수 있게 했다. [validation.py](../../api/app/validation.py)는 실행과 계획의 프로젝트, 경로, 정책 버전이 같은지도 확인한다.
 
-## 실행계획 형식
+정책 출처 ID의 실제 존재 여부 검사는 3단계에서 추가했다. 현재 코드에는 이 검사도 포함되어 있지만 1단계의 핵심은 계획의 **형식과 대상 일치**를 보장하는 것이다.
 
-- [모델](../../api/app/models.py): 대상 식별자, 화면 필드와 locator, 테스트 단계, 검증 조건, 근거 출처를 하나의 `TestPlan`으로 정의했다.
-- `schema_version: 1`로 형식 버전을 고정했다.
-- 필드 ID와 사례 ID의 중복을 거부하고, 단계나 검증이 존재하지 않는 필드를 참조하면 저장하지 않는다.
-- `fill`, `select`, `press`에는 입력값이, `value`, `text` 검증에는 기대값이 필요하다.
-- `evidence`는 정책 또는 코드의 출처 ID를 담는다. 지금은 출처 ID의 실재 여부를 조회하지 않는다.
-- 예시 데이터는 [test-plan.json](../../examples/test-plan.json)에 있다.
+## 확인한 것과 범위
 
-## API
+- 정상 계획 저장과 조회, 잘못된 필드 참조 거부를 확인했다.
+- React에서 실행을 만들면 목록과 상세에 저장된 실행 ID가 나타나는지 확인했다.
+- TypeScript 검사와 Vite 빌드가 통과했다.
+- 1단계의 테스트 계획은 수동 예시다. 브라우저 실행, 정책 검색, 모델 생성은 이후 단계에서 구현했다.
 
-| 메서드 | 경로 | 결과 |
-| --- | --- | --- |
-| GET | `/api/health` | DB 연결 확인 |
-| POST | `/api/runs` | 실행 생성, 201 |
-| GET | `/api/runs` | 최근 실행 50개 |
-| GET | `/api/runs/{id}` | 실행 상세, 없으면 404 |
-| PUT | `/api/runs/{id}/plan` | 실행계획 검증 및 저장, 대상 불일치면 409 |
-
-구현 코드는 [API](../../api/app/main.py)와 [화면](../../web/src/App.tsx)에 있다. API 명세는 실행 후 `http://127.0.0.1:8000/docs`에서 볼 수 있다.
-
-## 로컬에서 실행
-
-저장소 루트의 PowerShell 창 두 개에서 실행한다. PostgreSQL 17이 설치되어 있어야 한다.
-
-첫 번째 창:
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r api\requirements.txt
-.\scripts\start-api.ps1
-```
-
-두 번째 창:
-
-```powershell
-Set-Location web
-npm ci
-npm run dev
-```
-
-- 화면: `http://127.0.0.1:5173`
-- API: `http://127.0.0.1:8000/docs`
-- 전용 DB 종료: 저장소 루트에서 `.\scripts\stop-db.ps1`
-- DB 데이터와 비밀번호는 `.local/`에 있으며 Git에서 제외된다. 기존 시스템 PostgreSQL 서비스는 건드리지 않는다.
-
-실행계획 저장 예시:
-
-```powershell
-$policy = Get-Content .\examples\policies\order-name-v1.json -Raw
-Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/api/policies -ContentType 'application/json' -Body $policy
-$run = Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/api/runs -ContentType 'application/json' -Body '{"project_id":"demo-orders","route":"/orders/new","policy_version":"v1"}'
-$plan = Get-Content .\examples\test-plan.json -Raw
-Invoke-RestMethod -Method Put -Uri "http://127.0.0.1:8000/api/runs/$($run.id)/plan" -ContentType 'application/json' -Body $plan
-```
-
-3단계부터 정책 근거 ID를 실제 등록 문단과 대조하므로, 현재 API에서는 예시 정책을 먼저 등록해야 한다.
-
-## 확인한 결과
-
-- Pydantic 검사: 정상 예시는 통과하고 존재하지 않는 필드 참조는 거부했다.
-- API와 DB: 상태 확인, 실행 생성, 계획 저장, 상세 조회, 목록 조회가 연결되었다.
-- 화면: 브라우저에서 실행 생성 후 최근 목록에 표시되고 상세에 생성된 UUID가 나타났다.
-- 프런트엔드: TypeScript 검사와 Vite 빌드가 통과했다.
-
-## 다음 단계
-
-- 2단계에서 Python Playwright 실행기를 붙여 `TestPlan`의 단계와 검증을 실제 브라우저에서 수행한다.
-- RAG, LangGraph, 함수 호출, 벡터 검색은 이후 단계다. 이번 단계의 계획 예시는 수동 입력이며 테스트 실행도 아직 하지 않는다.
-- 컨테이너 이미지나 Kubernetes 확인은 최종 검증 단계에서 진행한다.
+로컬 구동 방법은 [README](../../README.md)에 있다.

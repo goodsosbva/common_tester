@@ -24,7 +24,7 @@ TOOLS = [
         "description": "Search policy paragraphs for this run's project and policy version.",
         "parameters": {
             "type": "object", "properties": {
-                "query": {"type": "string"}, "top_k": {"type": "integer"},
+                "query": {"type": "string"}, "top_k": {"type": "integer", "minimum": 1, "maximum": 5},
             }, "required": ["query", "top_k"], "additionalProperties": False,
         },
     },

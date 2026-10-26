@@ -1,6 +1,12 @@
 # Common Tester
 
-정책 근거로 브라우저 테스트 계획을 만들고, 사람이 승인한 계획을 Playwright로 실행하는 데모 프로젝트입니다. React, FastAPI, PostgreSQL, RAG 검색, 모델 도구 호출, LangGraph 승인 흐름을 포함합니다.
+Common Tester는 웹 화면의 입력 정책을 실제 브라우저 테스트로 확인하는 데모 앱입니다. 개발자나 QA 담당자가 검사할 화면, 정책 버전, 검사 목표와 사례 수를 입력하면 관련 정책 문단과 화면 요소를 조회해 테스트 계획을 만듭니다. 계획을 검토해 승인하면 Playwright가 사례를 실행하고 통과 여부와 화면 캡처를 남깁니다. 실패한 사례에는 trace도 남깁니다.
+
+현재 모델 생성 흐름은 데모 주문 등록 화면에서 동작합니다. 주문명 길이, 수량 범위, 금액 형식, 메모 입력 규칙을 정책으로 등록했고 1~30개 사례 생성을 요청할 수 있습니다. 화면의 계획과 정책 원문을 확인한 뒤 실행합니다.
+
+- [설계 근거와 동작 원리](docs/implementation/00-design-principles.md)
+- [실제 모델 생성과 실행 결과](docs/implementation/live-model-result.md)
+- [단계별 구현 기록](docs/implementation/README.md)
 
 ## Docker Compose 실행
 
@@ -61,12 +67,8 @@ npm run dev
 - [고정 정답 평가](docs/implementation/07-quality-evaluation.md): 검색 24문항, 계획 검증 16건, 브라우저 시나리오 17개, Playwright 케이스 20개
 - [단계별 구현 기록](docs/implementation/README.md)
 
-## 실제 모델 호출
+## 실제 모델 검증
 
-새 키를 로컬 `.env`에 입력하고 `docker compose up --build -d`로 재시작한 뒤 다음 검사를 실행합니다.
+2026-10-26 로컬 `.env`의 키로 모델이 데모 주문 폼의 계획 20개를 생성했다. 정책 검색과 화면 확인 도구를 사용했고, 승인 후 Playwright 실행에서 20개 모두 통과했다. 사례별 PNG 20장이 저장됐다. 상세 조건과 사례별 결과는 [실제 실행 기록](docs/implementation/live-model-result.md)에 있다.
 
-```powershell
-.\scripts\check-stage4-live.ps1
-```
-
-실제 API 응답과 모델이 만든 계획의 품질은 아직 확인되지 않았습니다. 고정 정답 평가의 점수는 실제 모델 생성 품질 점수와 구분합니다.
+이 결과는 등록된 데모 화면과 정책에 대한 확인이다. 고정 정답 평가의 점수와 실제 모델 생성 결과는 구분한다.
