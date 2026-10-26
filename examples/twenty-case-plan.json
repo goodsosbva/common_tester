@@ -1,0 +1,725 @@
+{
+  "schema_version": 1,
+  "project_id": "demo-orders",
+  "route": "/fixtures/order.html",
+  "policy_version": "v1",
+  "fields": [
+    {
+      "id": "order_name",
+      "label": "주문명",
+      "locator": {
+        "kind": "label",
+        "value": "주문명"
+      }
+    },
+    {
+      "id": "order_quantity",
+      "label": "주문 수량",
+      "locator": {
+        "kind": "label",
+        "value": "주문 수량"
+      }
+    },
+    {
+      "id": "order_amount",
+      "label": "요청 금액",
+      "locator": {
+        "kind": "label",
+        "value": "요청 금액 (원)"
+      }
+    },
+    {
+      "id": "order_note",
+      "label": "주문 메모",
+      "locator": {
+        "kind": "label",
+        "value": "주문 메모"
+      }
+    },
+    {
+      "id": "save",
+      "label": "저장 버튼",
+      "locator": {
+        "kind": "role",
+        "value": "button",
+        "name": "저장"
+      }
+    },
+    {
+      "id": "feedback",
+      "label": "저장 결과",
+      "locator": {
+        "kind": "test_id",
+        "value": "feedback"
+      }
+    }
+  ],
+  "cases": [
+    {
+      "id": "name-empty",
+      "title": "주문명 미입력 거부",
+      "steps": [
+        {
+          "action": "fill",
+          "field_id": "order_name",
+          "value": ""
+        },
+        {
+          "action": "click",
+          "field_id": "save"
+        }
+      ],
+      "assertions": [
+        {
+          "action": "text",
+          "field_id": "feedback",
+          "expected": "주문명을 입력해 주세요."
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "policy",
+          "source_id": "policy:demo-orders:order-name:v1:0",
+          "version": "v1"
+        }
+      ]
+    },
+    {
+      "id": "name-whitespace",
+      "title": "주문명 공백 거부",
+      "steps": [
+        {
+          "action": "fill",
+          "field_id": "order_name",
+          "value": "   "
+        },
+        {
+          "action": "click",
+          "field_id": "save"
+        }
+      ],
+      "assertions": [
+        {
+          "action": "text",
+          "field_id": "feedback",
+          "expected": "주문명을 입력해 주세요."
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "policy",
+          "source_id": "policy:demo-orders:order-name:v1:0",
+          "version": "v1"
+        }
+      ]
+    },
+    {
+      "id": "name-limit-20",
+      "title": "주문명 20자 허용",
+      "steps": [
+        {
+          "action": "fill",
+          "field_id": "order_name",
+          "value": "가가가가가가가가가가가가가가가가가가가가"
+        },
+        {
+          "action": "click",
+          "field_id": "save"
+        }
+      ],
+      "assertions": [
+        {
+          "action": "text",
+          "field_id": "feedback",
+          "expected": "저장되었습니다."
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "policy",
+          "source_id": "policy:demo-orders:order-name:v1:0",
+          "version": "v1"
+        }
+      ]
+    },
+    {
+      "id": "name-limit-21",
+      "title": "주문명 21자 거부",
+      "steps": [
+        {
+          "action": "fill",
+          "field_id": "order_name",
+          "value": "가가가가가가가가가가가가가가가가가가가가가"
+        },
+        {
+          "action": "click",
+          "field_id": "save"
+        }
+      ],
+      "assertions": [
+        {
+          "action": "text",
+          "field_id": "feedback",
+          "expected": "주문명은 20자 이하여야 합니다."
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "policy",
+          "source_id": "policy:demo-orders:order-name:v1:0",
+          "version": "v1"
+        }
+      ]
+    },
+    {
+      "id": "name-enter",
+      "title": "Enter 키로 정상 저장",
+      "steps": [
+        {
+          "action": "fill",
+          "field_id": "order_name",
+          "value": "정상 주문"
+        },
+        {
+          "action": "press",
+          "field_id": "order_name",
+          "value": "Enter"
+        }
+      ],
+      "assertions": [
+        {
+          "action": "text",
+          "field_id": "feedback",
+          "expected": "저장되었습니다."
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "policy",
+          "source_id": "policy:demo-orders:order-name:v1:0",
+          "version": "v1"
+        }
+      ]
+    },
+    {
+      "id": "quantity-empty",
+      "title": "수량 미입력 거부",
+      "steps": [
+        {
+          "action": "fill",
+          "field_id": "order_name",
+          "value": "정상 주문"
+        },
+        {
+          "action": "fill",
+          "field_id": "order_quantity",
+          "value": ""
+        },
+        {
+          "action": "click",
+          "field_id": "save"
+        }
+      ],
+      "assertions": [
+        {
+          "action": "text",
+          "field_id": "feedback",
+          "expected": "주문 수량은 1부터 99까지의 정수여야 합니다."
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "policy",
+          "source_id": "policy:demo-orders:order-quantity:v1:0",
+          "version": "v1"
+        }
+      ]
+    },
+    {
+      "id": "quantity-zero",
+      "title": "수량 0 거부",
+      "steps": [
+        {
+          "action": "fill",
+          "field_id": "order_name",
+          "value": "정상 주문"
+        },
+        {
+          "action": "fill",
+          "field_id": "order_quantity",
+          "value": "0"
+        },
+        {
+          "action": "click",
+          "field_id": "save"
+        }
+      ],
+      "assertions": [
+        {
+          "action": "text",
+          "field_id": "feedback",
+          "expected": "주문 수량은 1부터 99까지의 정수여야 합니다."
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "policy",
+          "source_id": "policy:demo-orders:order-quantity:v1:0",
+          "version": "v1"
+        }
+      ]
+    },
+    {
+      "id": "quantity-negative",
+      "title": "음수 수량 거부",
+      "steps": [
+        {
+          "action": "fill",
+          "field_id": "order_name",
+          "value": "정상 주문"
+        },
+        {
+          "action": "fill",
+          "field_id": "order_quantity",
+          "value": "-1"
+        },
+        {
+          "action": "click",
+          "field_id": "save"
+        }
+      ],
+      "assertions": [
+        {
+          "action": "text",
+          "field_id": "feedback",
+          "expected": "주문 수량은 1부터 99까지의 정수여야 합니다."
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "policy",
+          "source_id": "policy:demo-orders:order-quantity:v1:0",
+          "version": "v1"
+        }
+      ]
+    },
+    {
+      "id": "quantity-decimal",
+      "title": "소수 수량 거부",
+      "steps": [
+        {
+          "action": "fill",
+          "field_id": "order_name",
+          "value": "정상 주문"
+        },
+        {
+          "action": "fill",
+          "field_id": "order_quantity",
+          "value": "1.5"
+        },
+        {
+          "action": "click",
+          "field_id": "save"
+        }
+      ],
+      "assertions": [
+        {
+          "action": "text",
+          "field_id": "feedback",
+          "expected": "주문 수량은 1부터 99까지의 정수여야 합니다."
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "policy",
+          "source_id": "policy:demo-orders:order-quantity:v1:0",
+          "version": "v1"
+        }
+      ]
+    },
+    {
+      "id": "quantity-min-1",
+      "title": "최소 수량 1 허용",
+      "steps": [
+        {
+          "action": "fill",
+          "field_id": "order_name",
+          "value": "정상 주문"
+        },
+        {
+          "action": "fill",
+          "field_id": "order_quantity",
+          "value": "1"
+        },
+        {
+          "action": "click",
+          "field_id": "save"
+        }
+      ],
+      "assertions": [
+        {
+          "action": "text",
+          "field_id": "feedback",
+          "expected": "저장되었습니다."
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "policy",
+          "source_id": "policy:demo-orders:order-quantity:v1:0",
+          "version": "v1"
+        }
+      ]
+    },
+    {
+      "id": "quantity-stock-10",
+      "title": "재고 10개까지 허용",
+      "steps": [
+        {
+          "action": "fill",
+          "field_id": "order_name",
+          "value": "정상 주문"
+        },
+        {
+          "action": "fill",
+          "field_id": "order_quantity",
+          "value": "10"
+        },
+        {
+          "action": "click",
+          "field_id": "save"
+        }
+      ],
+      "assertions": [
+        {
+          "action": "text",
+          "field_id": "feedback",
+          "expected": "저장되었습니다."
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "policy",
+          "source_id": "policy:demo-orders:order-quantity:v1:0",
+          "version": "v1"
+        },
+        {
+          "kind": "code",
+          "source_id": "code:order_form",
+          "version": null
+        }
+      ]
+    },
+    {
+      "id": "quantity-stock-11",
+      "title": "재고 11개 요청 거부",
+      "steps": [
+        {
+          "action": "fill",
+          "field_id": "order_name",
+          "value": "정상 주문"
+        },
+        {
+          "action": "fill",
+          "field_id": "order_quantity",
+          "value": "11"
+        },
+        {
+          "action": "click",
+          "field_id": "save"
+        }
+      ],
+      "assertions": [
+        {
+          "action": "text",
+          "field_id": "feedback",
+          "expected": "재고가 부족합니다."
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "policy",
+          "source_id": "policy:demo-orders:order-quantity:v1:1",
+          "version": "v1"
+        },
+        {
+          "kind": "code",
+          "source_id": "code:order_form",
+          "version": null
+        }
+      ]
+    },
+    {
+      "id": "quantity-over-99",
+      "title": "수량 100 거부",
+      "steps": [
+        {
+          "action": "fill",
+          "field_id": "order_name",
+          "value": "정상 주문"
+        },
+        {
+          "action": "fill",
+          "field_id": "order_quantity",
+          "value": "100"
+        },
+        {
+          "action": "click",
+          "field_id": "save"
+        }
+      ],
+      "assertions": [
+        {
+          "action": "text",
+          "field_id": "feedback",
+          "expected": "주문 수량은 1부터 99까지의 정수여야 합니다."
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "policy",
+          "source_id": "policy:demo-orders:order-quantity:v1:0",
+          "version": "v1"
+        }
+      ]
+    },
+    {
+      "id": "amount-empty",
+      "title": "금액 미입력 거부",
+      "steps": [
+        {
+          "action": "fill",
+          "field_id": "order_name",
+          "value": "정상 주문"
+        },
+        {
+          "action": "fill",
+          "field_id": "order_amount",
+          "value": ""
+        },
+        {
+          "action": "click",
+          "field_id": "save"
+        }
+      ],
+      "assertions": [
+        {
+          "action": "text",
+          "field_id": "feedback",
+          "expected": "요청 금액은 0 이상의 정수여야 합니다."
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "policy",
+          "source_id": "policy:demo-orders:order-amount:v1:0",
+          "version": "v1"
+        }
+      ]
+    },
+    {
+      "id": "amount-negative",
+      "title": "음수 금액 거부",
+      "steps": [
+        {
+          "action": "fill",
+          "field_id": "order_name",
+          "value": "정상 주문"
+        },
+        {
+          "action": "fill",
+          "field_id": "order_amount",
+          "value": "-1"
+        },
+        {
+          "action": "click",
+          "field_id": "save"
+        }
+      ],
+      "assertions": [
+        {
+          "action": "text",
+          "field_id": "feedback",
+          "expected": "요청 금액은 0 이상의 정수여야 합니다."
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "policy",
+          "source_id": "policy:demo-orders:order-amount:v1:0",
+          "version": "v1"
+        }
+      ]
+    },
+    {
+      "id": "amount-decimal",
+      "title": "소수 금액 거부",
+      "steps": [
+        {
+          "action": "fill",
+          "field_id": "order_name",
+          "value": "정상 주문"
+        },
+        {
+          "action": "fill",
+          "field_id": "order_amount",
+          "value": "1.5"
+        },
+        {
+          "action": "click",
+          "field_id": "save"
+        }
+      ],
+      "assertions": [
+        {
+          "action": "text",
+          "field_id": "feedback",
+          "expected": "요청 금액은 0 이상의 정수여야 합니다."
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "policy",
+          "source_id": "policy:demo-orders:order-amount:v1:0",
+          "version": "v1"
+        }
+      ]
+    },
+    {
+      "id": "amount-zero",
+      "title": "0원 금액 허용",
+      "steps": [
+        {
+          "action": "fill",
+          "field_id": "order_name",
+          "value": "정상 주문"
+        },
+        {
+          "action": "fill",
+          "field_id": "order_amount",
+          "value": "0"
+        },
+        {
+          "action": "click",
+          "field_id": "save"
+        }
+      ],
+      "assertions": [
+        {
+          "action": "text",
+          "field_id": "feedback",
+          "expected": "저장되었습니다."
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "policy",
+          "source_id": "policy:demo-orders:order-amount:v1:0",
+          "version": "v1"
+        }
+      ]
+    },
+    {
+      "id": "note-empty",
+      "title": "빈 메모 허용",
+      "steps": [
+        {
+          "action": "fill",
+          "field_id": "order_name",
+          "value": "정상 주문"
+        },
+        {
+          "action": "fill",
+          "field_id": "order_note",
+          "value": ""
+        },
+        {
+          "action": "click",
+          "field_id": "save"
+        }
+      ],
+      "assertions": [
+        {
+          "action": "text",
+          "field_id": "feedback",
+          "expected": "저장되었습니다."
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "policy",
+          "source_id": "policy:demo-orders:order-note:v1:0",
+          "version": "v1"
+        }
+      ]
+    },
+    {
+      "id": "note-limit-200",
+      "title": "메모 200자 허용",
+      "steps": [
+        {
+          "action": "fill",
+          "field_id": "order_name",
+          "value": "정상 주문"
+        },
+        {
+          "action": "fill",
+          "field_id": "order_note",
+          "value": "가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가"
+        },
+        {
+          "action": "click",
+          "field_id": "save"
+        }
+      ],
+      "assertions": [
+        {
+          "action": "text",
+          "field_id": "feedback",
+          "expected": "저장되었습니다."
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "policy",
+          "source_id": "policy:demo-orders:order-note:v1:0",
+          "version": "v1"
+        }
+      ]
+    },
+    {
+      "id": "note-limit-201",
+      "title": "메모 201자 거부",
+      "steps": [
+        {
+          "action": "fill",
+          "field_id": "order_name",
+          "value": "정상 주문"
+        },
+        {
+          "action": "fill",
+          "field_id": "order_note",
+          "value": "가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가"
+        },
+        {
+          "action": "click",
+          "field_id": "save"
+        }
+      ],
+      "assertions": [
+        {
+          "action": "text",
+          "field_id": "feedback",
+          "expected": "주문 메모는 200자 이하여야 합니다."
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "policy",
+          "source_id": "policy:demo-orders:order-note:v1:0",
+          "version": "v1"
+        }
+      ]
+    }
+  ]
+}

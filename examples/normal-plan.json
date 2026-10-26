@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "project_id": "demo-orders",
+  "route": "/fixtures/order.html",
+  "policy_version": "v1",
+  "fields": [
+    { "id": "order_name", "label": "주문명", "locator": { "kind": "label", "value": "주문명" } },
+    { "id": "save", "label": "저장 버튼", "locator": { "kind": "role", "value": "button", "name": "저장" } },
+    { "id": "feedback", "label": "저장 결과", "locator": { "kind": "test_id", "value": "feedback" } }
+  ],
+  "cases": [
+    {
+      "id": "valid-order-name",
+      "title": "정상 주문명은 저장된다",
+      "steps": [
+        { "action": "fill", "field_id": "order_name", "value": "정상 주문" },
+        { "action": "click", "field_id": "save" }
+      ],
+      "assertions": [
+        { "action": "text", "field_id": "feedback", "expected": "저장되었습니다." }
+      ],
+      "evidence": [{ "kind": "policy", "source_id": "policy:demo-orders:order-name:v1:0", "version": "v1" }]
+    },
+    {
+      "id": "order-name-over-limit",
+      "title": "21자 주문명은 거부된다",
+      "steps": [
+        { "action": "fill", "field_id": "order_name", "value": "가나다라마바사아자차카타파하가나다라마바사" },
+        { "action": "click", "field_id": "save" }
+      ],
+      "assertions": [
+        { "action": "text", "field_id": "feedback", "expected": "주문명은 20자 이하여야 합니다." }
+      ],
+      "evidence": [{ "kind": "policy", "source_id": "policy:demo-orders:order-name:v1:0", "version": "v1" }]
+    }
+  ]
+}

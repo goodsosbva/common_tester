@@ -1,0 +1,133 @@
+{
+  "retrieval_min_top1": 0.9,
+  "retrieval": [
+    { "query": "주문명 최대 글자 수", "version": "v1", "source_id": "policy:demo-orders:order-name:v1:0" },
+    { "query": "주문명은 몇 글자까지 쓸 수 있어", "version": "v1", "source_id": "policy:demo-orders:order-name:v1:0" },
+    { "query": "주문명 길이 제한이 몇 자지", "version": "v1", "source_id": "policy:demo-orders:order-name:v1:0" },
+    { "query": "21자 주문명 저장 가능한가", "version": "v1", "source_id": "policy:demo-orders:order-name:v1:0" },
+    { "query": "주문 수량은 몇 개까지 가능한가", "version": "v1", "source_id": "policy:demo-orders:order-quantity:v1:0" },
+    { "query": "주문 수량의 최소와 최대", "version": "v1", "source_id": "policy:demo-orders:order-quantity:v1:0" },
+    { "query": "주문 수량 소수점 입력 가능 여부", "version": "v1", "source_id": "policy:demo-orders:order-quantity:v1:0" },
+    { "query": "주문 수량으로 0을 넣어도 되나", "version": "v1", "source_id": "policy:demo-orders:order-quantity:v1:0" },
+    { "query": "재고가 부족하면 저장되나요", "version": "v1", "source_id": "policy:demo-orders:order-quantity:v1:1" },
+    { "query": "재고보다 많이 주문하면 어떻게 되나", "version": "v1", "source_id": "policy:demo-orders:order-quantity:v1:1" },
+    { "query": "재고 초과 주문은 저장할 수 있나", "version": "v1", "source_id": "policy:demo-orders:order-quantity:v1:1" },
+    { "query": "재고 부족 메시지가 표시되는 조건", "version": "v1", "source_id": "policy:demo-orders:order-quantity:v1:1" },
+    { "query": "요청 금액에 음수를 넣어도 되나요", "version": "v1", "source_id": "policy:demo-orders:order-amount:v1:0" },
+    { "query": "주문 금액의 최솟값", "version": "v1", "source_id": "policy:demo-orders:order-amount:v1:0" },
+    { "query": "원화 금액에 소수점 입력 가능 여부", "version": "v1", "source_id": "policy:demo-orders:order-amount:v1:0" },
+    { "query": "마이너스 금액 저장 가능한가", "version": "v1", "source_id": "policy:demo-orders:order-amount:v1:0" },
+    { "query": "메모는 필수인가요", "version": "v1", "source_id": "policy:demo-orders:order-note:v1:0" },
+    { "query": "주문 메모 최대 입력 길이", "version": "v1", "source_id": "policy:demo-orders:order-note:v1:0" },
+    { "query": "메모를 비워 두어도 저장되는가", "version": "v1", "source_id": "policy:demo-orders:order-note:v1:0" },
+    { "query": "메모 200자 초과 입력 제한", "version": "v1", "source_id": "policy:demo-orders:order-note:v1:0" },
+    { "query": "주문명 v2 최대 길이", "version": "v2", "source_id": "policy:demo-orders:order-name:v2:0" },
+    { "query": "v2에서 31자 주문명은 가능한가", "version": "v2", "source_id": "policy:demo-orders:order-name:v2:0" },
+    { "query": "v2 주문명 30자 제한", "version": "v2", "source_id": "policy:demo-orders:order-name:v2:0" },
+    { "query": "v2 31자 이상이면 저장 거부", "version": "v2", "source_id": "policy:demo-orders:order-name:v2:0" }
+  ],
+  "plan_checks": [
+    { "name": "정상 계획", "fixture": "normal-plan.json", "expected_status": 200 },
+    { "name": "지어낸 결과 문구", "fixture": "normal-plan.json", "expected_status": 422,
+      "expected_detail": "Unsupported text assertion",
+      "edits": [{ "path": ["cases", 0, "assertions", 0, "expected"], "value": "근거 없는 완료 문구" }] },
+    { "name": "없는 정책 근거", "fixture": "normal-plan.json", "expected_status": 422,
+      "expected_detail": "Unknown policy evidence",
+      "edits": [{ "path": ["cases", 0, "evidence", 0, "source_id"], "value": "policy:demo-orders:missing:v1:0" }] },
+    { "name": "다른 정책 버전", "fixture": "normal-plan.json", "expected_status": 422,
+      "expected_detail": "Policy evidence version does not match plan",
+      "edits": [
+        { "path": ["cases", 0, "evidence", 0, "source_id"], "value": "policy:demo-orders:order-name:v2:0" },
+        { "path": ["cases", 0, "evidence", 0, "version"], "value": "v2" }
+      ] },
+    { "name": "등록된 코드 근거", "fixture": "normal-plan.json", "expected_status": 200,
+      "edits": [
+        { "path": ["cases", 0, "evidence", 0, "kind"], "value": "code" },
+        { "path": ["cases", 0, "evidence", 0, "source_id"], "value": "code:order_form" },
+        { "path": ["cases", 0, "evidence", 0, "version"], "value": null }
+      ] },
+    { "name": "허위 코드 근거", "fixture": "normal-plan.json", "expected_status": 422,
+      "expected_detail": "Unknown code evidence",
+      "edits": [
+        { "path": ["cases", 0, "evidence", 0, "kind"], "value": "code" },
+        { "path": ["cases", 0, "evidence", 0, "source_id"], "value": "code:missing" },
+        { "path": ["cases", 0, "evidence", 0, "version"], "value": null }
+      ] },
+    { "name": "존재하지 않는 필드 참조", "fixture": "normal-plan.json", "expected_status": 422,
+      "edits": [{ "path": ["cases", 0, "steps", 0, "field_id"], "value": "missing-field" }] },
+    { "name": "중복 필드 ID", "fixture": "normal-plan.json", "expected_status": 422,
+      "edits": [{ "path": ["fields", 1, "id"], "value": "order_name" }] },
+    { "name": "중복 테스트 ID", "fixture": "normal-plan.json", "expected_status": 422,
+      "edits": [{ "path": ["cases", 1, "id"], "value": "valid-order-name" }] },
+    { "name": "허용하지 않은 동작", "fixture": "normal-plan.json", "expected_status": 422,
+      "edits": [{ "path": ["cases", 0, "steps", 0, "action"], "value": "navigate" }] },
+    { "name": "클릭 단계의 불필요한 값", "fixture": "normal-plan.json", "expected_status": 422,
+      "edits": [{ "path": ["cases", 0, "steps", 1, "value"], "value": "enter" }] },
+    { "name": "허용하지 않은 위치 지정자", "fixture": "normal-plan.json", "expected_status": 422,
+      "edits": [{ "path": ["fields", 0, "locator", "kind"], "value": "xpath" }] },
+    { "name": "기대값 누락", "fixture": "normal-plan.json", "expected_status": 422,
+      "edits": [{ "path": ["cases", 1, "assertions", 0, "expected"], "value": null }] },
+    { "name": "빈 테스트 목록", "fixture": "normal-plan.json", "expected_status": 422,
+      "edits": [{ "path": ["cases"], "value": [] }] },
+    { "name": "실행 경로 불일치", "fixture": "normal-plan.json", "run_target": { "route": "/fixtures/order.html" },
+      "expected_status": 409, "edits": [{ "path": ["route"], "value": "/fixtures/other.html" }] },
+    { "name": "프로젝트 불일치", "fixture": "normal-plan.json", "run_target": { "project_id": "demo-orders" },
+      "expected_status": 409, "edits": [{ "path": ["project_id"], "value": "other-project" }] }
+  ],
+  "browser_checks": [
+    { "name": "정상 주문 저장", "fixture": "normal-plan.json", "expected_status": "passed" },
+    { "name": "20자 경계 허용", "fixture": "normal-plan.json", "case_indexes": [0], "expected_status": "passed",
+      "edits": [{ "path": ["cases", 0, "steps", 0, "value"], "value": "aaaaaaaaaaaaaaaaaaaa" }] },
+    { "name": "21자 경계 거부", "fixture": "normal-plan.json", "case_indexes": [1], "expected_status": "passed" },
+    { "name": "빈 주문명 거부", "fixture": "normal-plan.json", "case_indexes": [0], "expected_status": "passed",
+      "edits": [
+        { "path": ["cases", 0, "steps"], "value": [{ "action": "click", "field_id": "save", "value": null }] },
+        { "path": ["cases", 0, "assertions", 0, "expected"], "value": "주문명을 입력해 주세요." }
+      ] },
+    { "name": "공백 주문명 거부", "fixture": "normal-plan.json", "case_indexes": [0], "expected_status": "passed",
+      "edits": [
+        { "path": ["cases", 0, "steps", 0, "value"], "value": "   " },
+        { "path": ["cases", 0, "assertions", 0, "expected"], "value": "주문명을 입력해 주세요." }
+      ] },
+    { "name": "앞뒤 공백 입력 저장", "fixture": "normal-plan.json", "case_indexes": [0], "expected_status": "passed",
+      "edits": [{ "path": ["cases", 0, "steps", 0, "value"], "value": " 주문 " }] },
+    { "name": "한 글자 입력", "fixture": "normal-plan.json", "case_indexes": [0], "expected_status": "passed",
+      "edits": [{ "path": ["cases", 0, "steps", 0, "value"], "value": "가" }] },
+    { "name": "한글 20자 입력", "fixture": "normal-plan.json", "case_indexes": [0], "expected_status": "passed",
+      "edits": [{ "path": ["cases", 0, "steps", 0, "value"], "value": "가나다라마바사아자차카타파하가나다라마바" }] },
+    { "name": "이모지 10개 입력", "fixture": "normal-plan.json", "case_indexes": [0], "expected_status": "passed",
+      "edits": [{ "path": ["cases", 0, "steps", 0, "value"], "value": "😀😀😀😀😀😀😀😀😀😀" }] },
+    { "name": "이모지 11개 입력 제한", "fixture": "normal-plan.json", "case_indexes": [0], "expected_status": "passed",
+      "edits": [
+        { "path": ["cases", 0, "steps", 0, "value"], "value": "😀😀😀😀😀😀😀😀😀😀😀" },
+        { "path": ["cases", 0, "assertions", 0, "expected"], "value": "주문명은 20자 이하여야 합니다." }
+      ] },
+    { "name": "공백 포함 20자 입력", "fixture": "normal-plan.json", "case_indexes": [0], "expected_status": "passed",
+      "edits": [{ "path": ["cases", 0, "steps", 0, "value"], "value": " abcdefghijklmnopqrst " }] },
+    { "name": "공백 포함 21자 입력 제한", "fixture": "normal-plan.json", "case_indexes": [0], "expected_status": "passed",
+      "edits": [
+        { "path": ["cases", 0, "steps", 0, "value"], "value": " abcdefghijklmnopqrstu " },
+        { "path": ["cases", 0, "assertions", 0, "expected"], "value": "주문명은 20자 이하여야 합니다." }
+      ] },
+    { "name": "Enter 키로 제출", "fixture": "normal-plan.json", "case_indexes": [0], "expected_status": "passed",
+      "edits": [{ "path": ["cases", 0, "steps"], "value": [
+        { "action": "fill", "field_id": "order_name", "value": "키보드 제출" },
+        { "action": "press", "field_id": "order_name", "value": "Enter" }
+      ] }] },
+    { "name": "CSS 위치 지정자 실행", "fixture": "normal-plan.json", "case_indexes": [0], "expected_status": "passed",
+      "edits": [
+        { "path": ["fields", 0, "locator"], "value": { "kind": "css", "value": "#order-name" } },
+        { "path": ["fields", 1, "locator"], "value": { "kind": "css", "value": "button[type=submit]" } },
+        { "path": ["fields", 2, "locator"], "value": { "kind": "css", "value": "[data-testid='feedback']" } }
+      ] },
+    { "name": "21자 제한 결함 화면", "fixture": "bug-plan.json", "expected_status": "failed",
+      "expected_error_contains": "저장되었습니다." },
+    { "name": "상황과 모순된 기대값", "fixture": "normal-plan.json", "expected_status": "failed",
+      "expected_error_contains": "주문명은 20자 이하여야 합니다.",
+      "edits": [{ "path": ["cases", 1, "assertions", 0, "expected"], "value": "저장되었습니다." }] },
+    { "name": "없는 화면 요소", "fixture": "normal-plan.json", "expected_status": "failed",
+      "expected_error_contains": "missing-feedback",
+      "edits": [{ "path": ["fields", 2, "locator", "value"], "value": "missing-feedback" }] }
+  ],
+  "boundary_oracle": { "limit": 20, "expected_feedback": "주문명은 20자 이하여야 합니다." }
+}

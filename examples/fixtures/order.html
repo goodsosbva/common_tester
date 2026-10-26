@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>주문 등록 검사 화면</title>
+    <style>
+      body { font: 16px system-ui, sans-serif; max-width: 480px; margin: 64px auto; padding: 0 24px; }
+      label, input, textarea, button { display: block; }
+      input, textarea { width: 100%; padding: 10px; margin: 8px 0 16px; box-sizing: border-box; font: inherit; }
+      button { padding: 10px 20px; }
+    </style>
+  </head>
+  <body>
+    <h1>주문 등록</h1>
+    <p>주문명은 필수이며 20자까지 입력할 수 있습니다.</p>
+    <p>현재 재고: 10개</p>
+    <form id="order-form">
+      <label for="order-name">주문명</label>
+      <input id="order-name" name="order-name" type="text" />
+      <label for="order-quantity">주문 수량</label>
+      <input id="order-quantity" name="order-quantity" type="text" inputmode="numeric" value="1" />
+      <label for="order-amount">요청 금액 (원)</label>
+      <input id="order-amount" name="order-amount" type="text" inputmode="numeric" value="0" />
+      <label for="order-note">주문 메모</label>
+      <textarea id="order-note" name="order-note" rows="3"></textarea>
+      <button type="submit">저장</button>
+    </form>
+    <p data-testid="feedback" aria-live="polite"></p>
+    <script>
+      const limit = new URLSearchParams(location.search).has('bug') ? 30 : 20;
+      document.querySelector('#order-form').addEventListener('submit', (event) => {
+        event.preventDefault();
+        const name = document.querySelector('#order-name').value.trim();
+        const quantityRaw = document.querySelector('#order-quantity').value.trim();
+        const amountRaw = document.querySelector('#order-amount').value.trim();
+        const note = document.querySelector('#order-note').value;
+        const quantity = Number(quantityRaw);
+        const feedback = document.querySelector('[data-testid="feedback"]');
+        feedback.textContent = !name ? '주문명을 입력해 주세요.'
+          : name.length > limit ? '주문명은 20자 이하여야 합니다.'
+          : !/^\d+$/.test(quantityRaw) || !Number.isInteger(quantity) || quantity < 1 || quantity > 99
+            ? '주문 수량은 1부터 99까지의 정수여야 합니다.'
+          : quantity > 10 ? '재고가 부족합니다.'
+          : !/^\d+$/.test(amountRaw) || !Number.isInteger(Number(amountRaw))
+            ? '요청 금액은 0 이상의 정수여야 합니다.'
+          : note.length > 200 ? '주문 메모는 200자 이하여야 합니다.'
+          : '저장되었습니다.';
+      });
+    </script>
+  </body>
+</html>
