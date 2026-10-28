@@ -1,52 +1,52 @@
-# 1단계: 테스트 실행의 기본 구조
+# 1단계 새 실행 환경과 문서 임베딩
 
-## 한 문장으로 설명
+완료일: 2026-10-27
 
-테스트 한 번을 `run`으로 저장하고, 생성기와 브라우저 실행기가 함께 사용할 `TestPlan` 형식을 정한 뒤, React 화면에서 FastAPI를 거쳐 PostgreSQL까지 저장과 조회가 되는 경로를 만들었다.
+## 왜 이렇게 만들었는가
 
-이 단계에서는 AI가 계획을 만들거나 브라우저를 조작하지 않는다. 2단계에서 실행기를, 3단계 이후에 정책 검색과 모델 생성을 붙일 수 있도록 입력과 저장 형식을 먼저 확정했다.
+- 제품과 버전은 폴더로 구분한다. 같은 파일명이 다른 버전에 있어도 별도 SQLite 파일을 사용하므로 서로 덮어쓰지 않는다.
+- 문서 원문을 문단과 조각으로 나누고 상대 경로, 문단 번호, 조각 번호를 함께 저장한다. 검색 결과가 어느 원문에서 왔는지 확인할 수 있다.
+- 임베딩은 검색용이다. LLM에 줄 근거는 벡터를 역변환한 내용이 아니라 SQLite에 함께 보관한 원문이다.
+- 재임베딩은 임시 SQLite를 완성한 뒤 원래 파일과 교체한다. 처리 도중 실패하면 이전 버전 DB를 보존한다.
+- 제품 목록은 현재 원문 해시와 저장된 원문 해시를 비교한다. 원문을 수정하면 다시 임베딩할 때까지 준비되지 않은 상태로 표시한다.
+- 각 제품/버전 안의 여러 DOCX, Markdown, TXT 파일을 읽는다. 문서 ID를 따로 입력하지 않는다.
 
-## 왜 이 구조로 만들었나
+## 만든 것
 
-- **실행 단위가 필요했다.** 같은 화면을 여러 번 테스트해도 요청과 결과를 구분할 수 있도록 실행마다 UUID를 발급한다.
-- **생성기와 실행기의 약속이 필요했다.** 생성기가 자유 형식의 문장을 반환하면 실행기가 해석하기 어렵다. 그래서 화면 요소, 조작 순서, 기대 결과를 `TestPlan`이라는 구조화된 데이터로 정의했다.
-- **저장과 검증의 역할을 나눴다.** `project_id`, `route`, `policy_version`, `status`처럼 목록과 상태 확인에 필요한 값은 `runs` 테이블의 열로 저장한다. 테스트 사례 수에 따라 모양이 달라지는 계획은 JSONB로 저장한다. 저장 전에 Pydantic과 서버 검증을 통과시킨다.
+| 위치 | 내용 |
+| --- | --- |
+| api/core.py | 원문 읽기, 문단/조각 분리, FastEmbed 다국어 임베딩, 버전별 SQLite 교체 |
+| api/main.py | 상태 조회, 제품/버전 목록, 선택 버전 재임베딩 API |
+| web/src/ | 제품/버전 선택과 임베딩 상태를 보여 주는 새 React 화면 |
+| package.json, playwright.config.ts | 이후 Codex가 만드는 TypeScript 테스트를 실행할 Node Playwright Test 환경 |
+| documents/order-demo/v1, v2 | 실제 주문 정책 원문과 각각의 임베딩 DB |
+| api/check_foundation.py | v1 변경이 v2에 영향을 주지 않는지 확인하는 스크립트 |
 
-## 실제 요청 한 번이 처리되는 순서
+SQLite에는 source_files(path, sha256), chunks(path, paragraph_no, chunk_no, content, embedding), metadata(model, indexed_at)를 둔다. 버전 값은 DB에 중복 저장하지 않고 상위 폴더가 나타낸다.
 
-예: `demo-orders` 프로젝트의 `/fixtures/order.html`을 정책 `v1` 기준으로 테스트한다.
+## 확인 결과
 
-1. React가 프로젝트 ID, 화면 경로, 정책 버전을 입력받아 `POST /api/runs`로 보낸다. 화면 코드는 [App.tsx](../../web/src/App.tsx)의 `createRun`에 있다.
-2. FastAPI가 요청을 `RunCreate` 모델로 검사한다. 경로는 `/`로 시작해야 하고 식별자는 빈 문자열일 수 없다. 모델은 [models.py](../../api/app/models.py)에 있다.
-3. `create_run`이 `uuid4()`로 실행 ID를 만들고 PostgreSQL `runs` 테이블에 `project_id`, `route`, `policy_version`을 저장한다. `status`의 기본값은 `created`다. DB가 반환한 행을 API 응답으로 보낸다. 코드는 [main.py](../../api/app/main.py)에 있다.
-4. React가 반환된 실행을 화면에 선택하고 `GET /api/runs`로 목록을 다시 읽는다. 상세 화면을 열면 `GET /api/runs/{id}`로 해당 행을 조회한다.
-5. 계획을 저장할 때는 `PUT /api/runs/{id}/plan`으로 `TestPlan` JSON을 보낸다. FastAPI와 Pydantic이 형식을 검사하고, 서버가 해당 실행을 `SELECT ... FOR UPDATE`로 잠근 뒤 상태와 대상을 확인한다. 통과하면 계획 전체를 JSONB 열에 저장한다.
+| 확인 | 결과 |
+| --- | --- |
+| 새 Python 가상환경 의존성 설치 | 성공 |
+| 새 React 화면 빌드 | 성공 |
+| Playwright Test 1.56.0 및 Chromium 화면 확인 | 성공 |
+| 주문 정책 v1 임베딩 | 원문 조각 5개 |
+| 주문 정책 v2 임베딩 | 원문 조각 5개 |
+| v1을 재임베딩한 뒤 v2 DB SHA-256 비교 | 동일 |
+| v1 원문 수정 직후 목록 상태 | v1 갱신 필요, v2 준비됨 |
+| 테스트용 v1 원문 변경 후 재임베딩 | v1 DB 변경, v2 DB 그대로 |
+| DOCX 문단 읽기와 출처 번호 확인 | 성공 |
+| 실제 API와 웹 화면 HTTP 응답 | 각각 200 |
+| 브라우저의 제품/버전 2개 표시 | 성공 |
 
-요약하면 `화면 입력 → HTTP 요청 → Pydantic 검사 → DB 저장 → HTTP 응답 → 화면 갱신`이다.
+현재 화면 주소는 http://127.0.0.1:5173 이다. API는 http://127.0.0.1:8000 에서 실행 중이다. 캡처는 .local/stage1-ui.png에 있다.
 
-## TestPlan을 어떻게 설계했나
+## 현재 범위
 
-계획에는 다음 데이터가 들어간다.
+1단계는 문서 준비와 화면의 기본 구조까지다. retrieve_evidence부터 summarize_results까지의 5개 실행 노드, Codex 연결, 테스트 실행, 결과 화면은 아직 연결하지 않았다. 다음 단계는 저장된 임베딩을 검색해 원문 근거를 모으고 Codex 전달 명세 JSON을 만드는 것이다.
 
-| 항목 | 의미 | 예 |
-| --- | --- | --- |
-| 대상 | 어느 프로젝트와 화면, 정책 버전인지 | `demo-orders`, `/fixtures/order.html`, `v1` |
-| `fields` | 조작할 화면 요소와 찾는 방법 | `order_name`을 `label=주문명`으로 찾기 |
-| `steps` | 브라우저가 할 동작 | `order_name`에 `정상 주문` 입력 |
-| `assertions` | 동작 뒤 기대하는 상태 | `order_name`의 값이 `정상 주문`인지 확인 |
-| `evidence` | 해당 사례의 근거 출처 | 정책 문단의 `source_id` |
 
-예를 들면 `fields`에 `order_name`이라는 요소를 한 번 정의하고, 사례는 그 ID를 참조한다. 브라우저 실행기는 나중에 이 ID로 locator를 찾고 `fill`과 `value` 검증을 수행한다. 전체 예시는 [test-plan.json](../../examples/test-plan.json)에 있다.
+## 이후 원문 기준 변경
 
-계획 저장 전에 [models.py](../../api/app/models.py)는 필드 ID와 사례 ID의 중복, 존재하지 않는 필드 참조, 동작과 기대값의 누락을 거부한다. `schema_version: 1`을 두어 계획 형식이 바뀔 때 버전을 구별할 수 있게 했다. [validation.py](../../api/app/validation.py)는 실행과 계획의 프로젝트, 경로, 정책 버전이 같은지도 확인한다.
-
-정책 출처 ID의 실제 존재 여부 검사는 3단계에서 추가했다. 현재 코드에는 이 검사도 포함되어 있지만 1단계의 핵심은 계획의 **형식과 대상 일치**를 보장하는 것이다.
-
-## 확인한 것과 범위
-
-- 정상 계획 저장과 조회, 잘못된 필드 참조 거부를 확인했다.
-- React에서 실행을 만들면 목록과 상세에 저장된 실행 ID가 나타나는지 확인했다.
-- TypeScript 검사와 Vite 빌드가 통과했다.
-- 1단계의 테스트 계획은 수동 예시다. 브라우저 실행, 정책 검색, 모델 생성은 이후 단계에서 구현했다.
-
-로컬 구동 방법은 [README](../../README.md)에 있다.
+1단계의 order-demo 정책은 저장 방식 확인용 예제였고, 현재 examples/order-demo-documents/에 보관했다. 활성 제품의 테스트 생성 기준은 제품 PDF로 변경했다. 세부 내용은 01-product-source.md와 docs/product-plan.md를 따른다.

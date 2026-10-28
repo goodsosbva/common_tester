@@ -1,0 +1,11 @@
+{
+  "name": "common-tester",
+  "private": true,
+  "version": "2.0.1",
+  "scripts": {
+    "test:browser": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.0"
+  }
+}

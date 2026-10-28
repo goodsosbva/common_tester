@@ -1,0 +1,140 @@
+{
+  "run_id": "370b95c5c6444fd08552488457ae2094",
+  "execution_id": "b4b1912d33e74a38844db3c000333c22",
+  "target_url": "http://goodsosbva1.dothome.co.kr/",
+  "title": "권현성 — Frontend Developer",
+  "requirements": 6,
+  "api_response_count": 1,
+  "spec_model": "gpt-5.4-mini",
+  "codex_model": "gpt-6-luna",
+  "summary": {
+    "planned": 6,
+    "executed": 6,
+    "test_passed": 6,
+    "failed": 0,
+    "unconfirmed": 6,
+    "execution_errors": 0,
+    "unexecuted": 0,
+    "screenshots": 6,
+    "capture_errors": 0,
+    "quadrants": {
+      "TP": 0,
+      "FN": 0,
+      "FP": 0,
+      "TN": 0
+    }
+  },
+  "started_from_ui": true,
+  "started_at": "2026-10-28T03:07:46.509090+00:00",
+  "finished_at": "2026-10-28T03:07:51.242947+00:00",
+  "cases": [
+    {
+      "scenario_key": "CONNECT_001@requirements.md:4-ALLOW-1",
+      "requirement_id": "CONNECT_001",
+      "requirement_title": "페이지 제목과 주 제목",
+      "source_text": "첫 화면의 브라우저 제목은 권현성 — Frontend Developer이며, 주 제목 권현성.이 표시된다.",
+      "source_refs": [
+        {
+          "path": "requirements.md",
+          "paragraph_no": 4,
+          "chunk_no": 1
+        }
+      ],
+      "test_status": "passed",
+      "actual_policy": "unknown",
+      "classification": null,
+      "duration_ms": 555,
+      "screenshot": "CONNECT_001.png"
+    },
+    {
+      "scenario_key": "CONNECT_002@requirements.md:5-ALLOW-1",
+      "requirement_id": "CONNECT_002",
+      "requirement_title": "작업 메뉴 이동",
+      "source_text": "첫 화면의 주요 메뉴 작업 링크는 #work를 가리키고 누르면 고친 문제 세 가지 영역으로 이동한다.",
+      "source_refs": [
+        {
+          "path": "requirements.md",
+          "paragraph_no": 5,
+          "chunk_no": 1
+        }
+      ],
+      "test_status": "passed",
+      "actual_policy": "unknown",
+      "classification": null,
+      "duration_ms": 504,
+      "screenshot": "CONNECT_002.png"
+    },
+    {
+      "scenario_key": "CONNECT_003@requirements.md:6-ALLOW-1",
+      "requirement_id": "CONNECT_003",
+      "requirement_title": "경력 메뉴 이동",
+      "source_text": "첫 화면의 주요 메뉴 경력 링크는 #career를 가리키고 누르면 경력 영역으로 이동한다.",
+      "source_refs": [
+        {
+          "path": "requirements.md",
+          "paragraph_no": 6,
+          "chunk_no": 1
+        }
+      ],
+      "test_status": "passed",
+      "actual_policy": "unknown",
+      "classification": null,
+      "duration_ms": 402,
+      "screenshot": "CONNECT_003.png"
+    },
+    {
+      "scenario_key": "CONNECT_004@requirements.md:7-ALLOW-1",
+      "requirement_id": "CONNECT_004",
+      "requirement_title": "기술 메뉴 이동",
+      "source_text": "첫 화면의 주요 메뉴 기술 링크는 #skills를 가리키고 누르면 기술 스택 영역으로 이동한다.",
+      "source_refs": [
+        {
+          "path": "requirements.md",
+          "paragraph_no": 7,
+          "chunk_no": 1
+        }
+      ],
+      "test_status": "passed",
+      "actual_policy": "unknown",
+      "classification": null,
+      "duration_ms": 411,
+      "screenshot": "CONNECT_004.png"
+    },
+    {
+      "scenario_key": "CONNECT_005@requirements.md:8-ALLOW-1",
+      "requirement_id": "CONNECT_005",
+      "requirement_title": "연락 메뉴 이동",
+      "source_text": "첫 화면의 주요 메뉴 연락 링크는 #contact를 가리키고 누르면 함께 일할 이야기가 있다면 연락 주세요. 영역으로 이동한다. 메일 링크는 누르지 않는다.",
+      "source_refs": [
+        {
+          "path": "requirements.md",
+          "paragraph_no": 8,
+          "chunk_no": 1
+        }
+      ],
+      "test_status": "passed",
+      "actual_policy": "unknown",
+      "classification": null,
+      "duration_ms": 515,
+      "screenshot": "CONNECT_005.png"
+    },
+    {
+      "scenario_key": "CONNECT_006@requirements.md:9-ALLOW-1",
+      "requirement_id": "CONNECT_006",
+      "requirement_title": "본문 바로가기",
+      "source_text": "첫 화면의 본문으로 바로가기 링크는 #main을 가리키고 해당 id를 가진 본문이 존재한다. 초기 화면이 표시된 뒤 키보드로 링크에 접근할 수 있다.",
+      "source_refs": [
+        {
+          "path": "requirements.md",
+          "paragraph_no": 9,
+          "chunk_no": 1
+        }
+      ],
+      "test_status": "passed",
+      "actual_policy": "unknown",
+      "classification": null,
+      "duration_ms": 495,
+      "screenshot": "CONNECT_006.png"
+    }
+  ]
+}

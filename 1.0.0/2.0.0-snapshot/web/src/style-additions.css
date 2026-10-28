@@ -1,0 +1,9 @@
+select { width: 100%; min-width: 0; padding: 11px 12px; border: 1px solid #b9c6d8; border-radius: 8px; color: #142033; background: #fff; font: inherit; }
+select:focus-visible { outline: 3px solid #90b4ff; outline-offset: 2px; }
+.document-form { display: grid; grid-template-columns: 1fr .7fr 1.4fr 1.5fr auto; gap: 12px; align-items: end; margin-top: 20px; }
+.document-form button { padding: 11px 18px; border-radius: 8px; font-weight: 700; }
+.new-run { margin-top: 20px; }
+.objective-label { grid-column: 1 / -1; margin-top: 2px; }
+.objective-label textarea { max-width: 100%; }
+@media (max-width: 900px) { .document-form { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 600px) { .document-form { grid-template-columns: 1fr; } }

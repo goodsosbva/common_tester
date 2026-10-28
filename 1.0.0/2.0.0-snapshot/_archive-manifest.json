@@ -1,0 +1,58 @@
+{
+  "date": "2026-10-27",
+  "source": "D:\\common_tester",
+  "destination": "D:\\common_tester\\1.0.0\\2.0.0-snapshot",
+  "note": "web 이동 중 Vite 캐시 파일 2개가 추가되어 초기 514개에서 보관 후 516개가 됨",
+  "items": [
+    {
+      "name": "api",
+      "files": 17,
+      "bytes": 96071
+    },
+    {
+      "name": "web",
+      "files": 516,
+      "bytes": 57288042
+    },
+    {
+      "name": "docs",
+      "files": 3,
+      "bytes": 63408
+    },
+    {
+      "name": "examples",
+      "files": 8,
+      "bytes": 43955
+    },
+    {
+      "name": "README.md",
+      "files": 1,
+      "bytes": 4301
+    },
+    {
+      "name": ".env.example",
+      "files": 1,
+      "bytes": 16
+    },
+    {
+      "name": "PLAN_2.0.0.md",
+      "files": 1,
+      "bytes": 16028
+    },
+    {
+      "name": "Common Tester 2.0.0 기획안.docx",
+      "files": 1,
+      "bytes": 45109
+    },
+    {
+      "name": ".local",
+      "files": 69,
+      "bytes": 253532024
+    },
+    {
+      "name": ".venv",
+      "files": 8074,
+      "bytes": 283882341
+    }
+  ]
+}
