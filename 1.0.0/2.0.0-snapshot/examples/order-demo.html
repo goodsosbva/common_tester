@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>주문 등록 테스트 앱</title>
+  <style>
+    :root { font-family: system-ui, "Malgun Gothic", sans-serif; color: #162238; background: #f3f6fb; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 40px 20px; }
+    main { max-width: 760px; margin: auto; }
+    header { margin-bottom: 24px; }
+    h1 { margin: 8px 0; font-size: 2rem; }
+    p { color: #536179; line-height: 1.5; }
+    .badge { display: inline-block; padding: 5px 10px; border-radius: 20px; background: #e7efff; color: #2454ad; font-size: .8rem; font-weight: 700; }
+    .badge.bug { background: #fff0d8; color: #8c4f08; }
+    .card { padding: 26px; background: #fff; border: 1px solid #dce5f0; border-radius: 14px; box-shadow: 0 8px 24px #20345b0d; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    label { display: grid; gap: 8px; font-weight: 700; }
+    label.wide { grid-column: 1 / -1; }
+    input, textarea { width: 100%; padding: 11px 12px; border: 1px solid #b9c6d8; border-radius: 8px; font: inherit; }
+    textarea { resize: vertical; }
+    button { margin-top: 20px; padding: 11px 20px; border: 0; border-radius: 8px; color: white; background: #2454ad; font: inherit; font-weight: 700; cursor: pointer; }
+    #feedback { min-height: 24px; margin: 16px 0 0; font-weight: 700; }
+    #feedback.error { color: #ac2b2b; }
+    #feedback.success { color: #176c48; }
+    .stock { margin: 0 0 18px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; text-align: left; }
+    th, td { padding: 10px; border-bottom: 1px solid #e1e7f0; }
+    @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } label.wide { grid-column: auto; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <span class="badge" id="mode">정상 모드</span>
+      <h1>주문 등록</h1>
+      <p>주문명, 수량, 금액, 메모를 입력하고 정책에 맞는지 확인합니다.</p>
+    </header>
+    <section class="card" aria-labelledby="form-title">
+      <h2 id="form-title">새 주문</h2>
+      <p class="stock">현재 재고: <strong>10개</strong></p>
+      <form id="order-form" novalidate>
+        <div class="grid">
+          <label class="wide">주문명<input id="order-name" name="order-name" autocomplete="off"></label>
+          <label>주문 수량<input id="order-quantity" name="order-quantity" inputmode="numeric" value="1"></label>
+          <label>요청 금액 (원)<input id="order-amount" name="order-amount" inputmode="numeric" value="0"></label>
+          <label class="wide">주문 메모<textarea id="order-note" name="order-note" rows="3"></textarea></label>
+        </div>
+        <button type="submit">저장</button>
+      </form>
+      <p id="feedback" data-testid="feedback" role="status" aria-live="polite"></p>
+    </section>
+    <section class="card" style="margin-top:20px" aria-labelledby="saved-title">
+      <h2 id="saved-title">저장된 주문</h2>
+      <table><thead><tr><th>주문명</th><th>수량</th><th>금액</th></tr></thead><tbody id="orders"></tbody></table>
+    </section>
+  </main>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const policyVersion = params.get('policy') === 'v2' ? 'v2' : 'v1';
+    const buggy = params.get('bug') === 'name-limit';
+    const nameLimit = buggy ? 30 : policyVersion === 'v2' ? 30 : 20;
+    const badge = document.querySelector('#mode');
+    badge.textContent = buggy ? '결함 모드: 주문명 제한 오류' : `정상 모드: 정책 ${policyVersion}`;
+    badge.classList.toggle('bug', buggy);
+
+    document.querySelector('#order-form').addEventListener('submit', event => {
+      event.preventDefault();
+      const name = document.querySelector('#order-name').value.trim();
+      const quantityRaw = document.querySelector('#order-quantity').value.trim();
+      const amountRaw = document.querySelector('#order-amount').value.trim();
+      const note = document.querySelector('#order-note').value;
+      const quantity = Number(quantityRaw);
+      const amount = Number(amountRaw);
+      const feedback = document.querySelector('#feedback');
+
+      const error = !name ? '주문명을 입력해 주세요.'
+        : name.length > nameLimit ? `주문명은 ${policyVersion === 'v2' ? 30 : 20}자 이하여야 합니다.`
+        : !/^\d+$/.test(quantityRaw) || !Number.isSafeInteger(quantity) || quantity < 1 || quantity > 99
+          ? '주문 수량은 1부터 99까지의 정수여야 합니다.'
+        : quantity > 10 ? '재고가 부족합니다.'
+        : !/^\d+$/.test(amountRaw) || !Number.isSafeInteger(amount)
+          ? '요청 금액은 0 이상의 정수여야 합니다.'
+        : note.length > 200 ? '주문 메모는 200자 이하여야 합니다.'
+        : '';
+      feedback.textContent = error || '저장되었습니다.';
+      feedback.className = error ? 'error' : 'success';
+      if (!error) {
+        const row = document.querySelector('#orders').insertRow();
+        for (const value of [name, quantityRaw, amountRaw]) row.insertCell().textContent = value;
+      }
+    });
+  </script>
+</body>
+</html>

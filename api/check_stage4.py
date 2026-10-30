@@ -1,109 +1,86 @@
+"""Check token preservation and the completed normal/defect browser executions."""
 import json
-import os
+import sqlite3
 from pathlib import Path
-from types import SimpleNamespace
-from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
-
-ROOT = Path(__file__).resolve().parents[1]
-password = (ROOT / ".local" / "postgres-password").read_text().strip()
-os.environ["DATABASE_URL"] = f"postgresql://common_tester:{password}@127.0.0.1:55432/common_tester"
-os.environ["OPENAI_API_KEY"] = "local-fake-test-key"
-
-from app.main import app  # noqa: E402
+import core
+from main import app
+from workflow import WORKFLOW_GRAPH
 
 
-def function_call(call_id, name, arguments):
-    return SimpleNamespace(type="function_call", call_id=call_id, name=name,
-                           arguments=json.dumps(arguments, ensure_ascii=False))
-
-
-class FakeResponses:
-    def __init__(self, plan):
-        self.plan = plan
-        self.step = 0
-
-    def parse(self, **kwargs):
-        self.step += 1
-        if self.step == 1:
-            assert kwargs["tool_choice"] == {"type": "function", "name": "search_policy"}
-            output = [function_call("call-1", "search_policy", {"query": "주문명 20자 제한", "top_k": 3})]
-        elif self.step == 2:
-            assert kwargs["input"][0]["call_id"] == "call-1"
-            assert "policy:demo-orders:order-name:v1:0" in kwargs["input"][0]["output"]
-            output = [function_call("call-2", "read_project_file",
-                                    {"file_id": "order_form", "start_line": 1, "end_line": 40})]
-        elif self.step == 3:
-            assert kwargs["input"][0]["call_id"] == "call-2"
-            assert "주문명" in kwargs["input"][0]["output"]
-            output = [function_call("call-3", "inspect_page", {"route_id": "run_route"})]
-        else:
-            assert kwargs["input"][0]["call_id"] == "call-3"
-            assert "order-name" in kwargs["input"][0]["output"] or "주문명" in kwargs["input"][0]["output"]
-            output = []
-        return SimpleNamespace(id=f"response-{self.step}", usage=SimpleNamespace(total_tokens=10),
-                               output=output, output_parsed=self.plan if not output else None)
-
-
-class FakeOpenAI:
-    def __init__(self, plan):
-        self.responses = FakeResponses(plan)
-
-
-class BadArgumentsResponses:
-    def parse(self, **kwargs):
-        return SimpleNamespace(id="bad-response", usage=SimpleNamespace(total_tokens=1),
-                               output=[function_call("bad-call", "search_policy",
-                                                     {"query": "주문명 제한", "top_k": 100})],
-                               output_parsed=None)
-
+root = core.ROOT
+latest = json.loads((root / ".local" / "stage4-latest.json").read_text(encoding="utf-8"))
+run_id = latest["run_id"]
+folder = root / ".local" / "runs" / run_id
+with sqlite3.connect(core.version_path("product", "v1") / "embeddings.sqlite3") as db:
+    rows = db.execute("SELECT path,paragraph_no,chunk_no,content,embedding FROM chunks ORDER BY path,paragraph_no,chunk_no").fetchall()
+    metadata = dict(db.execute("SELECT key,value FROM metadata"))
+assert metadata["chunking"] == core.CHUNKING_VERSION
+for path, paragraphs in [("requirements.md", core.paragraphs(core.version_path("product", "v1") / "requirements.md"))]:
+    for number, original in enumerate(paragraphs, 1):
+        chunks = [row[3] for row in rows if row[0] == path and row[1] == number]
+        assert "".join(chunks) == original, (path, number)
+assert all(len(core.chunk_tokenizer().encode(row[3]).ids) <= core.EMBEDDING_TOKEN_LIMIT for row in rows)
+assert all(len(json.loads(row[4])) == 384 for row in rows)
+assert {"retrieve_evidence", "build_handoff", "generate_playwright", "run_playwright"} <= set(WORKFLOW_GRAPH.get_graph().nodes)
+spec = json.loads((folder / "test-spec.json").read_text(encoding="utf-8"))
+expected = {scenario["scenario_key"] for req in spec["requirements"] for scenario in req["scenarios"]}
+refs = {(row[0], row[1], row[2]) for row in rows}
+for req in spec["requirements"]:
+    for case in req["scenarios"]:
+        assert case["source_refs"] == req["source_refs"]
+        assert all((ref["path"], ref["paragraph_no"], ref["chunk_no"]) in refs for ref in case["source_refs"])
+coverage = json.loads((folder / "generated-tests" / "coverage.json").read_text(encoding="utf-8"))["scenarios"]
+assert len({item["scenario_key"] for item in coverage}) == len(coverage)
+assert {item["scenario_key"] for item in coverage} == expected
+modes = ("normal", "email", "blank-accepted", "warning-color", "warning-position")
+assert set(modes) <= set(latest["executions"])
+assert len({latest["executions"][mode]["execution_id"] for mode in modes}) == len(modes)
+executions = {}
+for mode in modes:
+    execution_id = latest["executions"][mode]["execution_id"]
+    output = folder / "executions" / execution_id
+    execution = json.loads((output / "execution.json").read_text(encoding="utf-8"))
+    assert execution["status"] == "completed", (mode, execution["error"])
+    assert execution["counts"]["capture_errors"] == 0, mode
+    assert execution["counts"]["skipped"] == 0, mode
+    assert {case["scenario_key"] for case in execution["cases"]} == {item["scenario_key"] for item in coverage if item["status"] == "generated"}
+    assert {item["scenario_key"] for item in execution["unexecuted"]} == {item["scenario_key"] for item in coverage if item["status"] == "unsupported"}
+    for case in execution["cases"]:
+        assert case["screenshots"], (mode, case["title"])
+        for screenshot in case["screenshots"]:
+            file = output / screenshot
+            assert file.resolve().is_relative_to(output.resolve())
+            assert file.read_bytes().startswith(b"\x89PNG\r\n\x1a\n"), file
+        if case["status"] in {"failed", "timedOut"}:
+            assert case["errors"] and case["traces"], (mode, case["title"])
+    failures = json.loads((output / "failures.json").read_text(encoding="utf-8"))
+    assert {case["scenario_key"] for case in failures} == {case["scenario_key"] for case in execution["cases"] if case["status"] in {"failed", "timedOut"}}
+    executions[mode] = execution
+assert len({json.dumps(execution["test_sources"], sort_keys=True) for execution in executions.values()}) == 1
+normal = {case["scenario_key"]: case for case in executions["normal"]["cases"]}
+for mode in modes[1:]:
+    changes = [case for case in executions[mode]["cases"] if case["status"] in {"failed", "timedOut"} and normal[case["scenario_key"]]["status"] == "passed"]
+    assert changes, (mode, "정상에서 통과한 테스트가 결함을 잡지 못했습니다.")
+    if mode == "email":
+        assert any(case["expected_policy"] == "allow" and case["requirement_key"].startswith("BE_USER_001@") for case in changes)
+    else:
+        assert any(case["expected_policy"] == "deny" and case["requirement_key"].startswith("BE_USER_001@") for case in changes)
 
 with TestClient(app) as client:
-    policy = json.loads((ROOT / "examples" / "policies" / "order-name-v1.json").read_text(encoding="utf-8"))
-    assert client.post("/api/policies", json=policy).status_code == 200
-    plan = json.loads((ROOT / "examples" / "normal-plan.json").read_text(encoding="utf-8"))
-    run = client.post("/api/runs", json={
-        "project_id": plan["project_id"], "route": plan["route"], "policy_version": plan["policy_version"],
-    }).json()
+    execution = executions["normal"]
+    url = f"/api/runs/{run_id}/executions/{execution['execution_id']}"
+    assert client.get(url).json()["execution_id"] == execution["execution_id"]
+    screenshot = execution["cases"][0]["screenshots"][0]
+    response = client.get(url + "/files/" + screenshot)
+    assert response.status_code == 200 and response.content.startswith(b"\x89PNG")
+    assert client.get(url + "/files/..%5c..%5c..%5c..%5c.env").status_code == 404
+    assert client.post(f"/api/runs/{run_id}/execute", json={"target_url": "file:///C:/invalid-target.html"}).status_code == 400
+    failed_launch = client.post(f"/api/runs/{run_id}/execute", json={"target_url": "http://127.0.0.1:1/"}).json()
+    assert failed_launch["status"] == "execution_error" and failed_launch["error"] and not failed_launch["cases"]
 
-    with patch("app.generator.OpenAI", return_value=FakeOpenAI(plan)):
-        response = client.post(f"/api/runs/{run['id']}/generate", json={"objective": "주문명 20자 제한 검사"})
-    assert response.status_code == 200, response.text
-    generated = response.json()
-    assert generated["plan"]["cases"][0]["id"] == "valid-order-name"
-    assert [call["name"] for call in generated["generation"]["calls"]] == [
-        "search_policy", "read_project_file", "inspect_page",
-    ]
-    assert generated["generation"]["total_tokens"] == 40
-    assert client.get(f"/api/runs/{run['id']}").json()["generation"]["status"] == "completed"
-
-    executed = client.post(f"/api/runs/{run['id']}/execute")
-    assert executed.status_code == 200, executed.text
-    assert executed.json()["status"] == "passed"
-
-    second = client.post("/api/runs", json={
-        "project_id": plan["project_id"], "route": plan["route"], "policy_version": plan["policy_version"],
-    }).json()
-    bad_plan = json.loads(json.dumps(plan))
-    bad_plan["cases"][0]["evidence"][0]["source_id"] = "policy:demo-orders:missing:v1:0"
-    with patch("app.generator.OpenAI", return_value=FakeOpenAI(bad_plan)):
-        rejected = client.post(f"/api/runs/{second['id']}/generate", json={"objective": "주문명 20자 제한 검사"})
-    assert rejected.status_code == 422
-    saved = client.get(f"/api/runs/{second['id']}").json()
-    assert saved["plan"] is None and saved["status"] == "created"
-    assert saved["generation"]["status"] == "error"
-
-    third = client.post("/api/runs", json={
-        "project_id": plan["project_id"], "route": plan["route"], "policy_version": plan["policy_version"],
-    }).json()
-    with patch("app.generator.OpenAI", return_value=SimpleNamespace(responses=BadArgumentsResponses())):
-        invalid = client.post(f"/api/runs/{third['id']}/generate", json={"objective": "주문명 20자 제한 검사"})
-    assert invalid.status_code == 502
-    checked = client.get(f"/api/runs/{third['id']}").json()
-    assert checked["status"] == "created" and checked["plan"] is None
-    assert checked["generation"]["calls"][0]["name"] == "search_policy"
-    assert "error" in checked["generation"]["calls"][0]
-
-print("도구 3종 호출과 기록, 계획 저장 후 브라우저 통과, 허위 근거와 잘못된 도구 인자 거부 확인")
+summary = {"run_id": run_id, "token_preservation": True, "graph_nodes": 4, "coverage_complete": True, "mutations_detected": list(modes[1:]), "screenshots_valid": True, "artifact_api": True, "launcher_error_separate": True}
+(root / ".local" / "stage4-check.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+print("PASS: " + json.dumps(summary, ensure_ascii=False))

@@ -1,0 +1,7 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><title>가입 예제</title></head>
+<body><h1>가입</h1><form id="signup"><label>이메일 <input type="email" id="email" required></label>
+<button type="submit">가입하기</button><p id="message" role="status"></p></form>
+<script>document.querySelector('#signup').addEventListener('submit', event => {
+  event.preventDefault(); document.querySelector('#message').textContent = '가입 완료';
+});</script></body></html>

@@ -1,0 +1,40 @@
+{
+  "scenarios": [
+    {
+      "scenario_key": "CONNECT_001@requirements.md:4-ALLOW-1",
+      "kind": "unknown",
+      "selector": null,
+      "reason": "The browser title and visible heading have no explicit success or error outcome signal."
+    },
+    {
+      "scenario_key": "CONNECT_002@requirements.md:5-ALLOW-1",
+      "kind": "unknown",
+      "selector": null,
+      "reason": "The work link and destination section have no explicit success or error outcome signal."
+    },
+    {
+      "scenario_key": "CONNECT_003@requirements.md:6-ALLOW-1",
+      "kind": "unknown",
+      "selector": null,
+      "reason": "The career link and destination section have no explicit success or error outcome signal."
+    },
+    {
+      "scenario_key": "CONNECT_004@requirements.md:7-ALLOW-1",
+      "kind": "unknown",
+      "selector": null,
+      "reason": "The skills link and destination section have no explicit success or error outcome signal."
+    },
+    {
+      "scenario_key": "CONNECT_005@requirements.md:8-ALLOW-1",
+      "kind": "unknown",
+      "selector": null,
+      "reason": "The contact link and destination section have no explicit success or error outcome signal."
+    },
+    {
+      "scenario_key": "CONNECT_006@requirements.md:9-ALLOW-1",
+      "kind": "unknown",
+      "selector": null,
+      "reason": "The skip link has no explicit success or error outcome signal; keyboard focus and the main landmark are the observable UI behavior."
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "scenarios": [
+    {
+      "scenario_key": "CONNECT_001@requirements.md:4-ALLOW-1",
+      "status": "generated",
+      "checks": ["browser title", "visible level-one heading"]
+    },
+    {
+      "scenario_key": "CONNECT_002@requirements.md:5-ALLOW-1",
+      "status": "generated",
+      "checks": ["major-menu link href", "click reaches #work and its heading is visible"]
+    },
+    {
+      "scenario_key": "CONNECT_003@requirements.md:6-ALLOW-1",
+      "status": "generated",
+      "checks": ["major-menu link href", "click reaches #career and its heading is visible"]
+    },
+    {
+      "scenario_key": "CONNECT_004@requirements.md:7-ALLOW-1",
+      "status": "generated",
+      "checks": ["major-menu link href", "click reaches #skills and its heading is visible"]
+    },
+    {
+      "scenario_key": "CONNECT_005@requirements.md:8-ALLOW-1",
+      "status": "generated",
+      "checks": ["major-menu link href", "click reaches #contact and its heading is visible"]
+    },
+    {
+      "scenario_key": "CONNECT_006@requirements.md:9-ALLOW-1",
+      "status": "generated",
+      "checks": ["skip link href", "main landmark exists", "keyboard Tab focuses skip link after initial UI appears"]
+    }
+  ]
+}

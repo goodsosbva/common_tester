@@ -1,293 +1,146 @@
-import { useEffect, useState, type FormEvent } from "react";
-
-type RunSummary = {
-  id: string; project_id: string; route: string; policy_version: string;
-  status: string; created_at: string;
-};
-type Evidence = { kind: "policy" | "code"; source_id: string; version: string | null };
-type TestPlan = {
-  fields: { id: string; label: string }[];
-  cases: {
-    id: string; title: string;
-    steps: { action: string; field_id: string; value: string | null }[];
-    assertions: { action: string; field_id: string; expected: string | null }[];
-    evidence: Evidence[];
-  }[];
-};
-type CaseResult = { id: string; title?: string; status: string; error?: string; screenshot?: string; trace?: string };
-type RunDetail = RunSummary & {
-  plan: TestPlan | null;
-  result: { status: string; total?: number; passed?: number; error?: string; cases: CaseResult[] } | null;
-  generation: { objective?: string; case_count?: number; attempts?: unknown[] } | null;
-  workflow: { phase?: string; attempts?: number; reason?: string } | null;
-};
-type PolicySource = { source_id: string; title: string; version: string; content: string };
-
-const statusLabel: Record<string, string> = {
-  created: "생성됨", generating: "계획 생성 중", awaiting_review: "검토 대기",
-  rejected: "거절됨", running: "실행 중", passed: "통과", failed: "실패", error: "오류",
-};
-const actionLabel: Record<string, string> = { fill: "입력", click: "클릭", select: "선택", press: "키 입력" };
-const assertionLabel: Record<string, string> = { visible: "표시 확인", value: "값 확인", text: "문구 확인" };
-
-async function request<T>(url: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(url, options);
-  if (!response.ok) {
-    const body = await response.json().catch(() => null) as { detail?: unknown } | null;
-    const detail = typeof body?.detail === "string" ? body.detail : `HTTP ${response.status}`;
-    if (response.status === 503 && detail.includes("OPENAI_API_KEY")) {
-      throw new Error("API 서버에 새 OPENAI_API_KEY를 설정하고 다시 시작하십시오.");
-    }
-    throw new Error(detail);
-  }
-  return response.json() as Promise<T>;
+import { useEffect, useRef, useState } from 'react';
+type Ref = { path: string; paragraph_no: number; chunk_no: number };
+type Product = { product: string; version: string; files: string[]; reference_files: string[]; indexed: boolean; chunk_count: number };
+type Summary = { planned: number; executed: number; test_passed: number; failed: number; unconfirmed: number; execution_errors: number; unexecuted: number; screenshots: number; capture_errors: number; quadrants: Record<string, number> };
+type Execution = { execution_id: string; target_url: string; started_at: string; status: string; counts: { total: number; passed: number; failed: number }; summary: Summary | null };
+type Run = { run_id: string; product: string; version: string; scope: string; target_url: string; created_at: string; requirement_count: number; scenario_count: number; status: string; current_node: string | null; error: string | null; executions: Execution[] };
+type FileLink = { path: string; url: string };
+type Case = { scenario_key: string; title: string; requirement_id: string; requirement_title: string; expected_policy: string; actual_policy: string; expected_observation: string; situation: string; actions: string[]; classification: string | null; verdict: string; test_status: string; observation_reason: string; observation: { text?: string; selector?: string; value?: unknown }; source_text: string; source_refs: Ref[]; errors: string[]; duration_ms: number; capture_error: string | null; screenshot_files: FileLink[]; trace_files: FileLink[] };
+type Unsupported = { scenario_key: string; requirement_title: string; reason: string; expected_policy: string; expected_observation: string; source_text: string; source_refs: Ref[] };
+type Report = { run_id: string; execution_id: string; product: string; version: string; scope: string; target_url: string; started_at: string; status: string; error: string | null; summary: Summary; cases: Case[]; unexecuted: Unsupported[]; unresolved: { requirement_key: string; requirement_title: string; reason: string }[]; artifacts: Record<string, string>; test_sources: { file: string; url: string; sha256: string }[] };
+const nodes = [['retrieve_evidence', '근거 검색'], ['build_handoff', '명세 작성'], ['generate_playwright', '코드 생성'], ['run_playwright', '브라우저 실행'], ['summarize_results', '결과 집계']];
+const verdicts: Record<string, string> = { passed: '통과', failed: '실패', unconfirmed: '정책 미확인', execution_error: '실행 오류' };
+const policies: Record<string, string> = { allow: '허용', deny: '거부', unknown: '미확인' };
+const statusNames: Record<string, string> = { queued: '대기', running: '진행 중', completed: '완료', not_run: '미실행', unsupported: '해당 화면 없음', error: '작업 중단', execution_error: '실행 오류', generated: '코드 준비', handoff: '명세 준비', empty: '자료 없음' };
+const quadrants: Record<string, string> = { TP: '허용 기대 → 실제 허용', FN: '허용 기대 → 실제 거부', FP: '거부 기대 → 실제 허용', TN: '거부 기대 → 실제 거부' };
+function date(value: string) { return new Date(value).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }); }
+function message(error: unknown) { return error instanceof Error ? error.message : String(error); }
+async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch('/api' + path, init);
+  const data = await response.json();
+  if (!response.ok) throw Error(typeof data.detail === 'string' ? data.detail : '요청을 처리하지 못했습니다.');
+  return data as T;
 }
-
-function jsonPost(body: unknown): RequestInit {
-  return { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
+function post(body?: unknown): RequestInit { return { method: 'POST', headers: { 'Content-Type': 'application/json' }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) }; }
+function Source({ text, refs }: { text: string; refs: Ref[] }) {
+  return <details className="source"><summary>기획 원문과 출처</summary><blockquote>{text || '연결된 원문이 없습니다.'}</blockquote><div className="refs">{refs.map(ref => <code key={`${ref.path}:${ref.paragraph_no}:${ref.chunk_no}`}>{ref.path} / 문단 {ref.paragraph_no} / 조각 {ref.chunk_no}</code>)}</div></details>;
 }
-
-function artifactUrl(runId: string, path: string): string {
-  const filename = path.split(/[\\/]/).pop() ?? "";
-  return `/api/runs/${runId}/artifacts/${encodeURIComponent(filename)}`;
-}
-
 export default function App() {
-  const [projectId, setProjectId] = useState("demo-orders");
-  const [route, setRoute] = useState("/fixtures/order.html");
-  const [policyVersion, setPolicyVersion] = useState("v1");
-  const [objective, setObjective] = useState("주문명, 주문 수량, 요청 금액, 주문 메모의 입력 규칙과 저장 결과 검증");
-  const [caseCount, setCaseCount] = useState(20);
-  const [runs, setRuns] = useState<RunSummary[]>([]);
-  const [selected, setSelected] = useState<RunDetail | null>(null);
-  const [sources, setSources] = useState<Record<string, PolicySource>>({});
-  const [sourceError, setSourceError] = useState("");
-  const [busy, setBusy] = useState<"create" | "start" | "approve" | "reject" | null>(null);
-  const [message, setMessage] = useState("");
-
-  async function refreshRuns() {
-    setRuns(await request<RunSummary[]>("/api/runs"));
+  const [products, setProducts] = useState<Product[]>([]);
+  const [productKey, setProductKey] = useState('');
+  const [target, setTarget] = useState('http://127.0.0.1:8765/product-demo.html');
+  const [scope, setScope] = useState('전체');
+  const [runs, setRuns] = useState<Run[]>([]);
+  const [runId, setRunId] = useState(new URLSearchParams(location.search).get('run') || '');
+  const [executionId, setExecutionId] = useState(new URLSearchParams(location.search).get('execution') || '');
+  const [report, setReport] = useState<Report | null>(null);
+  const [busy, setBusy] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [query, setQuery] = useState('');
+  const [preview, setPreview] = useState<FileLink | null>(null);
+  const dialog = useRef<HTMLDialogElement>(null);
+  const current = products.find(row => `${row.product}/${row.version}` === productKey);
+  const run = runs.find(row => row.run_id === runId);
+  const running = runs.some(row => ['queued', 'running'].includes(row.status));
+  async function refresh() {
+    const [items, history] = await Promise.all([api<Product[]>('/products'), api<Run[]>('/runs')]);
+    setProducts(items); setRuns(history); setError('');
+    setProductKey(key => items.some(item => `${item.product}/${item.version}` === key) ? key : items[0] ? `${items[0].product}/${items[0].version}` : '');
+    setRunId(id => id || history.find(item => item.executions.some(ex => ex.status === 'completed'))?.run_id || history[0]?.run_id || '');
   }
-
+  useEffect(() => { refresh().catch(reason => setError(message(reason))); }, []);
   useEffect(() => {
-    void refreshRuns().catch((error: Error) => setMessage(error.message));
-  }, []);
-
+    if (!running) return;
+    const timer = setInterval(() => { refresh().catch(reason => setError(message(reason))); }, 3000);
+    return () => clearInterval(timer);
+  }, [running]);
   useEffect(() => {
-    const controller = new AbortController();
-    const ids = [...new Set(selected?.plan?.cases.flatMap((testCase) =>
-      testCase.evidence.filter((evidence) => evidence.kind === "policy").map((evidence) => evidence.source_id)) ?? [])];
-    setSources({});
-    setSourceError("");
-    if (ids.length > 0) {
-      void Promise.all(ids.map((id) => request<PolicySource>(
-        `/api/policies/sources/${encodeURIComponent(id)}`, { signal: controller.signal },
-      ))).then((found) => {
-        if (!controller.signal.aborted) setSources(Object.fromEntries(found.map((source) => [source.source_id, source])));
-      }).catch((error: Error) => {
-        if (!controller.signal.aborted) setSourceError(`정책 원문을 불러오지 못했습니다: ${error.message}`);
-      });
-    }
-    return () => controller.abort();
-  }, [selected?.id, selected?.plan]);
-
-  async function createRun(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setBusy("create");
-    setMessage("");
+    if (!run) return;
+    setExecutionId(id => run?.executions.some(item => item.execution_id === id) ? id : run?.executions.find(item => item.status === 'completed')?.execution_id || run?.executions[0]?.execution_id || '');
+  }, [runId, run?.executions[0]?.execution_id]);
+  useEffect(() => {
+    let active = true;
+    setReport(null); setQuery('');
+    if (!run?.executions.some(item => item.execution_id === executionId)) { setLoading(false); return; }
+    setLoading(true);
+    api<Report>(`/runs/${runId}/executions/${executionId}/report`).then(value => {
+      if (!active) return;
+      setReport(value); setFilter(value.status === 'not_run' ? 'unexecuted' : value.summary.failed || value.summary.execution_errors ? 'failed' : 'all');
+    }).catch(reason => { if (active) setError(message(reason)); }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [runId, executionId, run?.run_id]);
+  useEffect(() => { if (preview && !dialog.current?.open) dialog.current?.showModal(); }, [preview]);
+  async function index() {
+    if (!current) return;
+    setBusy('index'); setError(''); setNotice('');
     try {
-      if (projectId === "demo-orders" && route.split("?", 1)[0] === "/fixtures/order.html" && policyVersion === "v1") {
-        await request("/api/demo/setup", { method: "POST" });
-      }
-      const run = await request<RunDetail>("/api/runs", jsonPost({
-        project_id: projectId, route, policy_version: policyVersion,
-      }));
-      setSelected(run);
-      await refreshRuns();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "실행을 만들 수 없습니다.");
-    } finally {
-      setBusy(null);
-    }
+      const result = await api<{ chunk_count: number }>(`/products/${encodeURIComponent(current.product)}/${encodeURIComponent(current.version)}/index`, post());
+      await refresh(); setNotice(`${result.chunk_count}개 원문 조각의 임베딩을 저장했습니다.`);
+    } catch (reason) { setError(message(reason)); } finally { setBusy(''); }
   }
-
-  async function selectRun(id: string) {
-    setMessage("");
+  async function start() {
+    if (!current) return;
+    setBusy('start'); setError(''); setNotice('');
     try {
-      setSelected(await request<RunDetail>(`/api/runs/${id}`));
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "실행을 읽을 수 없습니다.");
-    }
+      const created = await api<{ run_id: string }>('/runs', post({ product: current.product, version: current.version, target_url: target, scope }));
+      setRunId(created.run_id); setExecutionId(''); await refresh();
+      setNotice('새 작업을 시작했습니다. 근거 검색부터 결과 집계까지 진행 상태를 확인할 수 있습니다.');
+    } catch (reason) { setError(message(reason)); } finally { setBusy(''); }
   }
-
-  async function advance(action: "start" | "approve" | "reject") {
-    if (!selected) return;
-    setBusy(action);
-    setMessage("");
+  async function rerun() {
+    if (!report) return;
+    setBusy('execute'); setError(''); setNotice('');
     try {
-      const url = action === "start"
-        ? `/api/runs/${selected.id}/workflow/start`
-        : `/api/runs/${selected.id}/workflow/resume`;
-      const body = action === "start" ? { objective, case_count: caseCount } : { approved: action === "approve" };
-      setSelected(await request<RunDetail>(url, jsonPost(body)));
-      await refreshRuns();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "요청을 처리할 수 없습니다.");
-      setSelected(await request<RunDetail>(`/api/runs/${selected.id}`).catch(() => selected));
-      await refreshRuns().catch(() => undefined);
-    } finally {
-      setBusy(null);
-    }
+      const result = await api<{ execution_id: string }>(`/runs/${runId}/execute`, post({ target_url: report.target_url }));
+      await refresh(); setExecutionId(result.execution_id); setNotice('동일한 코드의 새 실행 기록을 저장했습니다.');
+    } catch (reason) { setError(message(reason)); } finally { setBusy(''); }
   }
-
-  const policyIds = [...new Set(selected?.plan?.cases.flatMap((testCase) =>
-    testCase.evidence.filter((evidence) => evidence.kind === "policy").map((evidence) => evidence.source_id)) ?? [])];
-  const sourcesReady = policyIds.every((id) => sources[id]);
-  const canStart = selected?.status === "created" && !selected.plan &&
-    selected.project_id === "demo-orders" && selected.route.split("?", 1)[0] === "/fixtures/order.html";
-
-  return (
-    <main className="layout">
-      <header className="page-header">
-        <p className="eyebrow">COMMON TESTER</p>
-        <h1>테스트 실행 작업 공간</h1>
-        <p>정책 근거를 확인하고 계획을 승인한 뒤 브라우저 검사 결과를 살펴보십시오.</p>
-      </header>
-
-      <section className="panel" aria-labelledby="create-title">
-        <div className="section-heading create-heading">
-          <h2 id="create-title">새 실행</h2>
-          <span className="hint">데모 주문 화면과 v1 정책을 바로 사용할 수 있습니다.</span>
-        </div>
-        <form className="create-form" onSubmit={createRun}>
-          <label>프로젝트 ID<input value={projectId} onChange={(event) => setProjectId(event.target.value)} required /></label>
-          <label>화면 경로<input value={route} onChange={(event) => setRoute(event.target.value)} pattern="/.*" required /></label>
-          <label>정책 버전<input value={policyVersion} onChange={(event) => setPolicyVersion(event.target.value)} required /></label>
-          <button disabled={busy !== null} type="submit">{busy === "create" ? "준비 중" : "실행 생성"}</button>
-        </form>
-      </section>
-
-      {message && <p className="error" role="alert">{message}</p>}
-
-      <div className="columns">
-        <section className="panel run-panel" aria-labelledby="runs-title">
-          <h2 id="runs-title">최근 실행</h2>
-          {runs.length === 0 ? <p>생성한 실행이 없습니다.</p> : (
-            <ul className="run-list">
-              {runs.map((run) => (
-                <li key={run.id}>
-                  <button className="run-button" aria-pressed={selected?.id === run.id}
-                    disabled={busy !== null} onClick={() => void selectRun(run.id)} type="button">
-                    <strong>{run.route}</strong>
-                    <span>{run.project_id} / {run.policy_version}</span>
-                    <small>{new Date(run.created_at).toLocaleString("ko-KR")}</small>
-                    <span className={`status status-${run.status}`}>{statusLabel[run.status] ?? run.status}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        <section className="panel detail-panel" aria-labelledby="detail-title">
-          <div className="section-heading">
-            <h2 id="detail-title">실행 상세</h2>
-            {selected && <span className={`status status-${selected.status}`} role="status">
-              {statusLabel[selected.status] ?? selected.status}
-            </span>}
-          </div>
-          {!selected ? <p>왼쪽에서 실행을 선택하십시오.</p> : <>
-            <dl className="run-meta">
-              <dt>실행 ID</dt><dd className="mono">{selected.id}</dd>
-              <dt>대상</dt><dd>{selected.project_id} / {selected.route}</dd>
-              <dt>정책 버전</dt><dd>{selected.policy_version}</dd>
-              {selected.workflow?.attempts && <><dt>계획 생성</dt><dd>{selected.workflow.attempts}회 시도</dd></>}
-            </dl>
-
-            {canStart && <div className="action-box">
-              <label htmlFor="objective">검사 목표</label>
-              <textarea id="objective" value={objective} maxLength={300} minLength={3}
-                onChange={(event) => setObjective(event.target.value)} rows={3} />
-              <label htmlFor="case-count">생성할 테스트 수 (1~30)</label>
-              <input id="case-count" type="number" min={1} max={30} required value={caseCount}
-                onChange={(event) => setCaseCount(Number(event.target.value))} />
-              <button disabled={busy !== null || objective.trim().length < 3 || caseCount < 1 || caseCount > 30}
-                onClick={() => void advance("start")} type="button">
-                {busy === "start" ? "계획 생성 중" : "계획 생성"}
-              </button>
-            </div>}
-            {selected.status === "created" && !canStart && !selected.plan &&
-              <p className="notice">자동 계획 생성은 현재 데모 주문 화면에서 지원합니다.</p>}
-            {selected.status === "generating" && <p className="notice">계획을 생성하고 있습니다. 잠시 후 다시 선택해 상태를 확인하십시오.</p>}
-            {selected.workflow?.reason && <p className="error">검증 오류: {selected.workflow.reason}</p>}
-
-            {selected.plan && <section className="plan-section" aria-labelledby="plan-title">
-              <h3 id="plan-title">실행계획 ({selected.plan.cases.length}개)</h3>
-              {selected.generation?.objective && <p className="objective">목표: {selected.generation.objective}</p>}
-              {selected.plan.cases.map((testCase, index) => {
-                const fields = Object.fromEntries(selected.plan!.fields.map((field) => [field.id, field.label]));
-                const outcome = selected.result?.cases.find((item) => item.id === testCase.id);
-                return <article className="case-card" key={testCase.id}>
-                  <div className="section-heading">
-                    <h4>{index + 1}. {testCase.title}</h4>
-                    {outcome && <span className={`status status-${outcome.status}`}>
-                      {statusLabel[outcome.status] ?? outcome.status}
-                    </span>}
-                  </div>
-                  <p className="case-id mono">{testCase.id}</p>
-                  <h5>실행 단계</h5>
-                  <ol>{testCase.steps.map((step, stepIndex) => <li key={stepIndex}>
-                    {fields[step.field_id] ?? step.field_id} {actionLabel[step.action] ?? step.action}
-                    {step.value != null && <>: <code>{step.value}</code></>}
-                  </li>)}</ol>
-                  <h5>확인 항목</h5>
-                  <ul>{testCase.assertions.map((assertion, assertionIndex) => <li key={assertionIndex}>
-                    {fields[assertion.field_id] ?? assertion.field_id} {assertionLabel[assertion.action] ?? assertion.action}
-                    {assertion.expected != null && <>: <code>{assertion.expected}</code></>}
-                  </li>)}</ul>
-                  <h5>근거</h5>
-                  <ul className="evidence-list">{testCase.evidence.map((evidence) => <li key={evidence.source_id}>
-                    {evidence.kind === "policy" && sources[evidence.source_id]
-                      ? <><strong>{sources[evidence.source_id].title} ({sources[evidence.source_id].version})</strong>
-                          <p>{sources[evidence.source_id].content}</p></>
-                      : <span className="mono">{evidence.source_id}</span>}
-                  </li>)}</ul>
-                  {outcome?.error && <p className="error">{outcome.error}</p>}
-                  {outcome && (outcome.screenshot || outcome.trace) && <div className="artifact-links">
-                    {outcome.screenshot && <a className="screenshot-link" href={artifactUrl(selected.id, outcome.screenshot)} target="_blank" rel="noreferrer">
-                      <img src={artifactUrl(selected.id, outcome.screenshot)} alt={`${outcome.status === "passed" ? "성공" : "실패"} 화면 캡처`} loading="lazy" />
-                      <span>{outcome.status === "passed" ? "성공" : "실패"} 화면 캡처</span>
-                    </a>}
-                    {outcome.trace && <a href={artifactUrl(selected.id, outcome.trace)}>Playwright 추적 파일</a>}
-                  </div>}
-                </article>;
-              })}
-            </section>}
-
-            {selected.status === "awaiting_review" && <div className="review-box">
-              <h3>계획 검토</h3>
-              <p>실행 단계, 기대 결과와 정책 원문을 확인한 뒤 결정하십시오.</p>
-              {sourceError && <p className="error" role="alert">{sourceError}</p>}
-              {!sourcesReady && !sourceError && <p>정책 원문을 불러오는 중입니다.</p>}
-              <div className="review-actions">
-                <button className="primary" disabled={busy !== null || !sourcesReady || !!sourceError}
-                  onClick={() => void advance("approve")} type="button">
-                  {busy === "approve" ? "브라우저 실행 중" : "승인하고 실행"}
-                </button>
-                <button className="secondary" disabled={busy !== null}
-                  onClick={() => void advance("reject")} type="button">계획 거절</button>
-              </div>
-            </div>}
-
-            {selected.result && <section className="result-section" aria-labelledby="result-title">
-              <h3 id="result-title">실행 결과</h3>
-              {selected.result.total != null && <p>{selected.result.total}건 중 {selected.result.passed ?? 0}건 통과, {selected.result.total - (selected.result.passed ?? 0)}건 실패</p>}
-              {selected.result.error && <p className="error">{selected.result.error}</p>}
-            </section>}
-            {selected.status === "rejected" && <p className="notice">계획을 거절했습니다. 브라우저 검사는 실행하지 않았습니다.</p>}
-          </>}
-        </section>
+  useEffect(() => {
+    if (runId && executionId) history.replaceState(null, '', `?run=${runId}&execution=${executionId}`);
+  }, [runId, executionId]);
+  const summary = report?.summary;
+  const needle = query.toLocaleLowerCase();
+  const visibleCases = report?.cases.filter(item => {
+    const matches = filter === 'all' || (filter === 'failed' ? ['failed', 'execution_error'].includes(item.verdict) : filter === 'unconfirmed' ? item.classification === null && item.verdict !== 'execution_error' : filter === item.verdict || filter === item.classification);
+    return matches && `${item.title} ${item.requirement_title} ${item.scenario_key} ${item.source_text}`.toLocaleLowerCase().includes(needle);
+  }) || [];
+  const unsupported = report?.unexecuted.filter(item => `${item.scenario_key} ${item.requirement_title} ${item.reason} ${item.source_text}`.toLocaleLowerCase().includes(needle)) || [];
+  const nodeIndex = nodes.findIndex(([id]) => id === run?.current_node);
+  return <main className="layout">
+    <header className="page-header"><div><p className="eyebrow">COMMON TESTER <span>2.0.1</span></p><h1>기획에서 실행 결과까지</h1><p>요구사항을 근거로 만든 테스트와 실제 화면을 함께 확인합니다.</p></div><button className="secondary" onClick={() => refresh().catch(reason => setError(message(reason)))}>기록 새로고침</button></header>
+    {error && <p className="alert danger" role="alert">{error}</p>}
+    {notice && <p className="alert notice" role="status">{notice}</p>}
+    <details className="panel preparation">
+      <summary><strong>새 테스트 준비</strong><span className="hint">제품 문서 선택, 임베딩, 테스트 생성과 실행</span></summary>
+      <div className="setup-grid">
+        <label>제품과 버전<select value={productKey} onChange={event => setProductKey(event.target.value)}>{!products.length && <option value="">등록된 제품 없음</option>}{products.map(item => <option key={`${item.product}/${item.version}`}>{`${item.product}/${item.version}`}</option>)}</select></label>
+        <label className="target">대상 앱 URL<input type="url" value={target} onChange={event => setTarget(event.target.value)} placeholder="https://example.com" /></label>
+        <label>검사 범위<input value={scope} onChange={event => setScope(event.target.value)} /></label>
       </div>
-    </main>
-  );
+      {current && <p className="document-info">documents/{current.product}/{current.version} <strong>{current.indexed ? `${current.chunk_count}개 조각 준비됨` : '임베딩 필요'}</strong><br />검색 원문: {current.files.join(', ')}{current.reference_files.length > 0 && <><br />원본: {current.reference_files.join(', ')}</>}</p>}
+      <div className="actions"><button className="secondary" disabled={!current || !!busy || running} onClick={index}>{busy === 'index' ? '임베딩 중...' : '문서 임베딩'}</button><button className="primary" disabled={!current?.indexed || !scope.trim() || !target.trim() || !!busy || running} onClick={start}>{busy === 'start' ? '시작 중...' : '생성부터 실행까지 시작'}</button><span className="hint">요구사항과 URL의 공개 화면 정보를 모델에 전달해 테스트 코드를 만듭니다.</span></div>
+    </details>
+    <div className="workspace">
+      <aside className="panel history"><div className="section-heading"><h2>작업 기록</h2><span className="counter">{runs.length}</span></div><p className="hint">작업을 고른 뒤 개별 실행을 확인하세요.</p><nav aria-label="작업 기록">{runs.map(item => <button key={item.run_id} className={`run-item ${runId === item.run_id ? 'selected' : ''}`} onClick={() => { setRunId(item.run_id); setError(''); }} aria-current={runId === item.run_id ? 'true' : undefined}><span className="run-title">{item.product || '제품 미지정'} <small>{item.version}</small></span><time>{date(item.created_at)}</time><span className="run-meta">{item.scenario_count}개 상황 / {item.executions.length}회 실행</span><span className={`badge ${item.status === 'error' ? 'failed' : ''}`}>{statusNames[item.status] || item.status}</span><code>{item.run_id.slice(0, 8)}</code></button>)}</nav>{!runs.length && <p>아직 작업 기록이 없습니다.</p>}</aside>
+      <section className="results-area" aria-label="실행 결과">
+        {run && <section className="panel run-progress"><div className="section-heading"><h2>{run.product} / {run.version}</h2><span className={`badge ${run.status === 'error' ? 'failed' : ''}`}>{statusNames[run.status] || run.status}</span></div><ol className="pipeline">{nodes.map(([id, label], index) => <li key={id} className={`${index < nodeIndex || run.status === 'completed' ? 'done' : ''} ${index === nodeIndex && run.status !== 'completed' ? 'active' : ''}`}><span>{index + 1}</span>{label}</li>)}</ol>{run.error && <p className="alert danger">{run.error}</p>}{['running', 'queued'].includes(run.status) && <p className="hint" role="status">진행 중입니다. 3초마다 상태를 갱신합니다.</p>}<code className="run-id">작업 ID {run.run_id}</code></section>}
+        {run && !!run.executions.length && <section className="panel execution-picker"><label>실행 기록<select aria-label="실행 기록" value={executionId} onChange={event => setExecutionId(event.target.value)}>{run.executions.map(item => <option key={item.execution_id} value={item.execution_id}>{date(item.started_at)} / {item.target_url} / {item.counts.passed} 통과, {item.counts.failed} 실패 / {item.execution_id.slice(0, 8)}</option>)}</select></label><button className="secondary" onClick={rerun} disabled={!!busy || !report || running}>{busy === 'execute' ? '브라우저 실행 중...' : '같은 코드 다시 실행'}</button></section>}
+        {loading && <p className="panel" role="status">실행 결과를 읽고 있습니다...</p>}
+        {report && summary && <>
+          <section className="panel report-overview"><div className="section-heading"><div><p className="eyebrow">실행 요약</p><h2>{report.status === 'not_run' ? '이 앱에서 실행할 수 있는 상황이 없습니다' : summary.failed ? `${summary.failed}개 점검 실패` : report.status === 'execution_error' || summary.execution_errors ? '실행을 완료하지 못했습니다' : '실행한 점검을 모두 통과했습니다'}</h2></div><span className={`badge ${report.status === 'not_run' ? '' : summary.failed || summary.execution_errors ? 'failed' : 'passed'}`}>{report.status === 'not_run' ? '미실행' : summary.failed || summary.execution_errors ? '확인 필요' : '실행 완료'}</span></div><p className="target-url">{report.target_url}</p><p className="hint">실행 ID <code>{report.execution_id}</code> / {date(report.started_at)}</p>{report.error && <p className="alert danger" role="alert">{report.error}</p>}<div className="metrics">{[['계획 상황', summary.planned], ['실행', summary.executed], ['Playwright 통과', summary.test_passed], ['점검 실패', summary.failed], ['스크린샷', summary.screenshots], ['미실행', summary.unexecuted]].map(([label, count]) => <div key={label} className={label === '점검 실패' && summary.failed ? 'metric-failed' : ''}><strong>{count}</strong><span>{label}</span></div>)}</div><div className="quadrants">{Object.keys(quadrants).map(name => <button key={name} className={`${name} ${filter === name ? 'chosen' : ''}`} aria-pressed={filter === name} onClick={() => setFilter(filter === name ? 'all' : name)}><span>{name}</span><strong>{summary.quadrants[name]}</strong><small>{quadrants[name]}</small></button>)}</div><p className="classification-note">정책 판정과 상세 점검은 별개입니다. TN이어도 문구, 색상, 위치가 다르면 점검 실패로 표시됩니다.</p><div className="subcounts"><button onClick={() => setFilter('unconfirmed')}>정책 미확인 <strong>{summary.unconfirmed}</strong></button><button onClick={() => setFilter('execution_error')}>실행 오류 <strong>{summary.execution_errors}</strong></button><span>캡처 오류 <strong>{summary.capture_errors}</strong></span></div></section>
+          <section className="panel case-workspace"><div className="section-heading"><h2>점검 목록</h2><span className="hint">실패 항목 우선 표시</span></div><div className="filters" role="group" aria-label="결과 필터">{[['all', `실행 전체 ${summary.executed}`], ['failed', `실패 ${summary.failed + summary.execution_errors}`], ['passed', '통과'], ['unconfirmed', `정책 미확인 ${summary.unconfirmed}`], ['unexecuted', `미실행 ${summary.unexecuted}`]].map(([id, label]) => <button key={id} className={filter === id ? 'chosen' : ''} aria-pressed={filter === id} onClick={() => setFilter(id)}>{label}</button>)}</div><input className="search" aria-label="점검 검색" placeholder="요구사항 ID, 제목, 원문 검색" value={query} onChange={event => setQuery(event.target.value)} /><p className="hint" aria-live="polite">{filter === 'unexecuted' ? unsupported.length : visibleCases.length}개 항목 표시</p>
+          {filter === 'unexecuted' ? unsupported.map(item => <details key={item.scenario_key} className="case-card unsupported"><summary><span className="badge">미실행</span><span className="case-title">{item.requirement_title}<code>{item.scenario_key}</code></span></summary><div className="case-body"><p className="unsupported-reason">{item.reason}</p><p><strong>기대 결과</strong> {item.expected_observation}</p><Source text={item.source_text} refs={item.source_refs} /></div></details>) : visibleCases.map(item => <details key={`${report.execution_id}:${item.scenario_key}`} className={`case-card ${item.verdict}`} open={['failed', 'execution_error'].includes(item.verdict) || undefined}><summary><span className={`badge ${item.verdict}`}>{verdicts[item.verdict]}</span><span className="case-title">{item.title.replace(item.scenario_key, '').trim()}<code>{item.scenario_key}</code></span><span className={`quadrant-label ${item.classification || ''}`}>{item.classification || '미확인'}</span></summary><div className="case-body"><div className="policy-comparison"><div><span>기대 정책</span><strong>{policies[item.expected_policy]}</strong></div><span aria-hidden="true">→</span><div><span>실제 관찰</span><strong>{policies[item.actual_policy]}</strong></div><div><span>Playwright</span><strong>{item.test_status === 'passed' ? '통과' : item.test_status === 'failed' ? '실패' : item.test_status}</strong></div></div><p><strong>기대 결과</strong><br />{item.expected_observation}</p>{item.situation && <p><strong>테스트 상황</strong><br />{item.situation}</p>}{!!item.actions?.length && <details><summary>실행 동작</summary><ol>{item.actions.map((action, index) => <li key={index}>{action}</li>)}</ol></details>}<div className="observed"><strong>실제 화면 신호</strong><p>{item.observation?.text || item.observation_reason}</p>{item.observation?.selector && <code>{item.observation.selector} / {JSON.stringify(item.observation.value)}</code>}</div>{item.actual_policy === 'unknown' && <p className="alert caution">{item.observation_reason}</p>}{item.errors.map((text, index) => <pre className="assertion-error" key={index}>{text}</pre>)}{item.capture_error && <p className="alert danger">{item.capture_error}</p>}<Source text={item.source_text} refs={item.source_refs} /><div className="screenshots">{item.screenshot_files.map((file, index) => <button key={file.path} className="screenshot" onClick={() => setPreview(file)} aria-label={`${item.scenario_key} 스크린샷 ${index + 1} 크게 보기`}><img src={file.url} loading="lazy" alt={`${item.requirement_title} 실행 결과 ${index + 1}`} /><span>스크린샷 크게 보기</span></button>)}</div><div className="artifact-links">{item.trace_files.map(file => <a key={file.path} href={file.url} download>실패 trace 다운로드</a>)}<span>{(item.duration_ms / 1000).toFixed(2)}초</span></div></div></details>)}{!(filter === 'unexecuted' ? unsupported.length : visibleCases.length) && <p className="empty">조건에 맞는 항목이 없습니다.</p>}</section>
+          <details className="panel unresolved"><summary>기획 미확정 사항 <strong>{report.unresolved.length}</strong></summary><p className="hint">원문에 없는 기준은 임의로 보충하지 않았습니다.</p><ul>{report.unresolved.map((item, index) => <li key={index}><strong>{item.requirement_title}</strong> <code>{item.requirement_key}</code><p>{item.reason}</p></li>)}</ul></details>
+          <details className="panel artifacts"><summary>실행 파일과 코드</summary><p className="hint">이 실행에 사용한 코드 사본과 원본 결과 파일입니다.</p><div className="artifact-links">{Object.entries(report.artifacts).map(([name, url]) => <a key={name} href={url} download>{name}</a>)}</div>{report.test_sources.map(source => <p key={source.file}><a href={source.url} download>{source.file}</a><code className="hash">SHA-256 {source.sha256}</code></p>)}</details>
+        </>}
+        {!run && <section className="panel empty"><h2>제품 문서를 준비하면 시작할 수 있습니다</h2><p>새 테스트 준비에서 제품과 대상 앱을 선택하세요.</p></section>}
+        {run && !loading && !report && !run.executions.length && !['running', 'queued'].includes(run.status) && <p className="panel empty">아직 브라우저 실행 결과가 없습니다. 새 테스트 준비에서 생성과 실행을 시작할 수 있습니다.</p>}
+      </section>
+    </div>
+    <dialog ref={dialog} className="image-dialog" onClose={() => setPreview(null)} onClick={event => { if (event.target === event.currentTarget) dialog.current?.close(); }} aria-label="실행 스크린샷"><div className="dialog-toolbar"><strong>실행 스크린샷</strong><button onClick={() => dialog.current?.close()} autoFocus>닫기</button></div>{preview && <><img src={preview.url} alt="실행 결과 스크린샷 확대" /><a href={preview.url} download>원본 이미지 다운로드</a></>}</dialog>
+    <footer>Common Tester 2.0.1 / 근거, 코드, 실행 결과를 작업 ID와 실행 ID별로 보관합니다.</footer>
+  </main>;
 }
